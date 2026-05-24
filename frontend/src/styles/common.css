@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap');
+@import "./vars.css";
+
+html {
+}
+
+body {
+	color: var(--text-color);
+}
+body.body--dark {
+	color: var(--text-color-dark);
+}
+
+a {
+	color: var(--link-color);
+}
+
+body.body--dark a {
+	color: var(--link-color-dark);
+}
+
+#app .q-btn {
+	text-transform: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin: 0 0 12px 0;
+	margin-bottom: var(--q-h-bottom-margin, 12px);
+}
