@@ -5,17 +5,20 @@
         :style="{zIndex: zIndex, minHeight: height, maxHeight: height, '--row-height': rowHeight }" ref="rowsContainer">
         <WalrusMediaBrowserRow v-for="(item, index) in rows" :row="item" :primaryColor="primaryColor" :key="item.id" ref="rows"
             @itemClick="onItemClick"  />
+        <WalrusMediaContextMenu ref="contextMenu" @delete="onDeleteItem" />
     </div>
 </template>
 
 <script>
 import WalrusMediaBrowserRow from './WalrusMediaBrowserRow.vue';
+import WalrusMediaContextMenu from './menus/WalrusMediaContextMenu.vue';
 import { toRaw, shallowReactive } from 'vue';
 
 export default {
     name: 'WalrusMediaFolderView',
     components: {
         WalrusMediaBrowserRow,
+        WalrusMediaContextMenu,
     },
     props: {
         walrusMediaFolder: {
@@ -68,6 +71,10 @@ export default {
     methods: {
         onItemClick(item) {
             this.$emit('itemClick', item);
+        },
+        onDeleteItem({ name }) {
+            console.log('FolderView: onDeleteItem', name, 'folder:', this.walrusMediaFolder?.name);
+            this.walrusMediaFolder.removeChild(name);
         },
         async bringToFront() {
             this.isOnFront = true;
@@ -178,9 +185,11 @@ export default {
         },
         attachEventsToFolder() {
             this.walrusMediaFolder.on('rowAdded', this.__onRowAdded);
+            this.walrusMediaFolder.on('rowRemoved', this.__onRowRemoved);
         },
         detachEventsFromFolder() {
             this.walrusMediaFolder.off('rowAdded', this.__onRowAdded);
+            this.walrusMediaFolder.off('rowRemoved', this.__onRowRemoved);
         },
         getRowsFromFolderData() {
         },
@@ -227,6 +236,11 @@ export default {
                 });
             }
         };
+        this.__onRowRemoved = (row) => {
+            const idx = this.rows.indexOf(row);
+            if (idx !== -1) this.rows.splice(idx, 1);
+            delete this.rowsIds[row.id];
+        };
         this.__onWindowResize = () => {
             this.cachedRowHeight = null;
         };
@@ -236,6 +250,7 @@ export default {
         };
         this.attachEventsToFolder(this.walrusMediaFolder);
         this.$refs.rowsContainer.addEventListener('scroll', this.__onContainerScroll);
+        this.$refs.contextMenu.attachTo(this.$refs.rowsContainer);
     },
     unmounted() {
         if (this.walrusMediaFolder && this.__onRowAdded) {

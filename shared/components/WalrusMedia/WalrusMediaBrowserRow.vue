@@ -77,14 +77,21 @@ export default {
             if (this.isDisposed) {
                 return;
             }
-            // Force update when item is added
+            this.$forceUpdate();
+        };
+        this.__onItemRemoved = () => {
+            if (this.isDisposed) return;
             this.$forceUpdate();
         };
         this.row.on('itemAdded', this.__onItemAdded);
+        this.row.on('itemRemoved', this.__onItemRemoved);
     },
     beforeUnmount() {
         if (this.row && this.__onItemAdded) {
             this.row.off('itemAdded', this.__onItemAdded);
+        }
+        if (this.row && this.__onItemRemoved) {
+            this.row.off('itemRemoved', this.__onItemRemoved);
         }
     },
     computed: {

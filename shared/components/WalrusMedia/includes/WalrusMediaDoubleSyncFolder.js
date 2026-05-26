@@ -28,6 +28,7 @@ export default class WalrusMediaDoubleSyncFolder extends DoubleSyncFolder {
         // UI state
         this._rowBuilder = new WalrusMediaRowBuilder();
         this._rowBuilder.on('rowAdded', (row) => this._emit('rowAdded', row));
+        this._rowBuilder.on('rowRemoved', (row) => this._emit('rowRemoved', row));
         this._items = [];
         this._folders = [];
         this._listeners = new Map();
@@ -57,7 +58,24 @@ export default class WalrusMediaDoubleSyncFolder extends DoubleSyncFolder {
         return folder;
     }
 
-    async removeChild(name) { return this._children.delete(name); }
+    async removeChild(name) {
+        console.log('DSFolder.removeChild', name, 'children:', [...this._children.keys()]);
+        const child = this._children.get(name);
+        if (!child) { console.log('DSFolder.removeChild: child not found'); return false; }
+        this._children.delete(name);
+
+        const arr = child instanceof WalrusMediaDoubleSyncFolder ? this._folders : this._items;
+        const idx = arr.indexOf(child);
+        if (idx !== -1) arr.splice(idx, 1);
+
+        const removed = this._rowBuilder.remove(child);
+        console.log('DSFolder.removeChild: rowBuilder.remove =>', removed, 'items left:', this._items.length, 'folders left:', this._folders.length);
+
+        this._pendingCount++;
+        this._emit('change');
+        this._emit('pendingChange', { change: { type: 'remove', name } });
+        return true;
+    }
 
     // ── UI-facing API ──
 
@@ -150,10 +168,12 @@ export default class WalrusMediaDoubleSyncFolder extends DoubleSyncFolder {
         dsFile._folder = this;
 
         this._children.set(uniqueName, dsFile);
-        this._items.push(dsFile);
-        this._rowBuilder.push(dsFile);
+        if (this._loaded) {
+            this._items.push(dsFile);
+            this._rowBuilder.push(dsFile);
+            this._emit('item', dsFile);
+        }
         this._pendingCount++;
-        this._emit('item', dsFile);
         this._emit('change');
         this._emit('pendingChange', { change: { type: 'add' } });
 
@@ -168,10 +188,14 @@ export default class WalrusMediaDoubleSyncFolder extends DoubleSyncFolder {
 
     async mkdir(folderName) {
         const folder = await this.addFolder(folderName);
-        this._folders.push(folder);
-        this._rowBuilder.unshift(folder);
+        if (this._loaded) {
+            if (!this._folders.includes(folder)) {
+                this._folders.push(folder);
+                this._rowBuilder.unshift(folder);
+            }
+            this._emit('folder', folder);
+        }
         this._pendingCount++;
-        this._emit('folder', folder);
         this._emit('change');
         this._emit('pendingChange', { change: { type: 'mkdir' } });
         return folder;
@@ -192,10 +216,12 @@ export default class WalrusMediaDoubleSyncFolder extends DoubleSyncFolder {
         const dsFile = WalrusMediaDoubleSyncFile.create(uniqueName, bytes, {});
         dsFile._folder = this;
         this._children.set(uniqueName, dsFile);
-        this._items.push(dsFile);
-        this._rowBuilder.push(dsFile);
+        if (this._loaded) {
+            this._items.push(dsFile);
+            this._rowBuilder.push(dsFile);
+            this._emit('item', dsFile);
+        }
         this._pendingCount++;
-        this._emit('item', dsFile);
         this._emit('change');
         this._emit('pendingChange', { change: { type: 'add' } });
         return dsFile;

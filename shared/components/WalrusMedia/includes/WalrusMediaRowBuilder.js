@@ -18,6 +18,26 @@ class WalrusMediaRow extends WalrusMediaAbstract {
         this.isEnded = true;
     }
 
+    remove(item) {
+        const i = this.items.indexOf(item);
+        if (i === -1) return false;
+
+        const remaining = this.items.filter((_, idx) => idx !== i);
+
+        this.items = [];
+        this.widths = [];
+        this.idWidth = {};
+        this.filledWidth = 0;
+        this.isFull = false;
+
+        for (const r of remaining) {
+            this.pushIfHasSpace(r);
+        }
+
+        this.emit('itemRemoved', item);
+        return true;
+    }
+
     unshift(itemOrArrayOfItems) {
         const countOfItemsOnStart = this.items.length;
 
@@ -175,6 +195,49 @@ export default class WalrusMediaRowBuilder extends WalrusMediaAbstract {
             shiftingItems = row.unshift(shiftingItems);
             rowIndex++;
         } while (shiftingItems.length);
+    }
+
+    remove(item) {
+        let rowIdx = -1;
+        for (let r = 0; r < this._rows.length; r++) {
+            if (this._rows[r].items.indexOf(item) !== -1) {
+                rowIdx = r;
+                break;
+            }
+        }
+        if (rowIdx === -1) return false;
+
+        const remaining = [];
+        for (let r = rowIdx; r < this._rows.length; r++) {
+            for (const rowItem of this._rows[r].items) {
+                if (rowItem !== item) remaining.push(rowItem);
+            }
+            this._rows[r].items = [];
+            this._rows[r].widths = [];
+            this._rows[r].idWidth = {};
+            this._rows[r].filledWidth = 0;
+            this._rows[r].isFull = false;
+        }
+
+        let cur = rowIdx;
+        for (const r of remaining) {
+            let pushed = this._rows[cur].pushIfHasSpace(r);
+            if (!pushed && cur + 1 < this._rows.length) {
+                cur++;
+                pushed = this._rows[cur].pushIfHasSpace(r);
+            }
+        }
+
+        while (this._rows.length > 0 && this._rows[this._rows.length - 1].items.length === 0) {
+            const empty = this._rows.pop();
+            this.emit('rowRemoved', empty);
+        }
+
+        for (let r = rowIdx; r < this._rows.length; r++) {
+            this._rows[r].emit('itemRemoved', item);
+        }
+
+        return true;
     }
 
     end() {

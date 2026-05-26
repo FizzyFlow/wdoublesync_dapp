@@ -1,6 +1,6 @@
 <template>
 
-    <div class="rowItemContainer" :class="{ isToBeUploaded: isToBeUploaded }" @click="onClick">
+    <div class="rowItemContainer" :class="{ isToBeUploaded: isToBeUploaded }" :data-item-name="item.name" :data-item-type="item.isBackButton ? 'back' : item.isFolder ? 'folder' : 'file'" @click="onClick">
         <div class="rowItemFolder"
             v-if="item.isBackButton">
             <FolderIcon class="rowItemIcon" :color="primaryColor" />

@@ -1,0 +1,174 @@
+<template>
+    <Teleport to="body">
+        <div v-if="isVisible" class="ctxMenu" :style="{ left: posX + 'px', top: posY + 'px' }" @click.stop>
+            <div class="ctxMenuItem ctxMenuDanger" @click="onDelete">Delete</div>
+        </div>
+    </Teleport>
+</template>
+
+<script>
+const LONG_TAP_MS = 500;
+const LONG_TAP_MOVE_THRESHOLD = 10;
+const MENU_WIDTH = 140;
+const MENU_HEIGHT = 40;
+
+export default {
+    name: 'WalrusMediaContextMenu',
+    emits: ['delete'],
+    data() {
+        return {
+            isVisible: false,
+            posX: 0,
+            posY: 0,
+            targetItemName: null,
+            targetItemType: null,
+        };
+    },
+    methods: {
+        attachTo(containerEl) {
+            this._container = containerEl;
+
+            this._onContextMenu = (e) => {
+                const el = e.target.closest('[data-item-name]');
+                if (!el || el.dataset.itemType === 'back') {
+                    this.close();
+                    return;
+                }
+                e.preventDefault();
+                this._show(el, e.clientX, e.clientY);
+            };
+
+            this._touchStartX = 0;
+            this._touchStartY = 0;
+            this._longTapTimer = null;
+            this._longTapFired = false;
+
+            this._onTouchStart = (e) => {
+                const el = e.target.closest('[data-item-name]');
+                if (!el || el.dataset.itemType === 'back') return;
+
+                const t = e.touches[0];
+                this._touchStartX = t.clientX;
+                this._touchStartY = t.clientY;
+                this._longTapFired = false;
+
+                this._longTapTimer = setTimeout(() => {
+                    this._longTapFired = true;
+                    this._show(el, t.clientX, t.clientY);
+                }, LONG_TAP_MS);
+            };
+
+            this._onTouchMove = (e) => {
+                if (!this._longTapTimer) return;
+                const t = e.touches[0];
+                const dx = t.clientX - this._touchStartX;
+                const dy = t.clientY - this._touchStartY;
+                if (dx * dx + dy * dy > LONG_TAP_MOVE_THRESHOLD * LONG_TAP_MOVE_THRESHOLD) {
+                    clearTimeout(this._longTapTimer);
+                    this._longTapTimer = null;
+                }
+            };
+
+            this._onTouchEnd = (e) => {
+                clearTimeout(this._longTapTimer);
+                this._longTapTimer = null;
+                if (this._longTapFired) {
+                    e.preventDefault();
+                }
+            };
+
+            this._onDocClick = (e) => {
+                if (this._longTapFired) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    this._longTapFired = false;
+                    return;
+                }
+                if (this.isVisible && !e.target.closest('.ctxMenu')) {
+                    console.log('ctxMenu: click-outside, closing');
+                    this.close();
+                }
+            };
+
+            this._onKeyDown = (e) => {
+                if (this.isVisible && e.key === 'Escape') {
+                    this.close();
+                }
+            };
+
+            this._onScroll = () => {
+                if (this.isVisible) this.close();
+            };
+
+            containerEl.addEventListener('contextmenu', this._onContextMenu);
+            containerEl.addEventListener('touchstart', this._onTouchStart, { passive: false });
+            containerEl.addEventListener('touchmove', this._onTouchMove, { passive: true });
+            containerEl.addEventListener('touchend', this._onTouchEnd);
+            containerEl.addEventListener('touchcancel', this._onTouchEnd);
+            containerEl.addEventListener('scroll', this._onScroll);
+            document.addEventListener('click', this._onDocClick, true);
+            document.addEventListener('keydown', this._onKeyDown);
+        },
+
+        _show(el, x, y) {
+            this.targetItemName = el.dataset.itemName;
+            this.targetItemType = el.dataset.itemType;
+            this.posX = Math.min(x, window.innerWidth - MENU_WIDTH - 8);
+            this.posY = Math.min(y, window.innerHeight - MENU_HEIGHT - 8);
+            this.isVisible = true;
+            console.log('ctxMenu: show', this.targetItemName, this.targetItemType, x, y);
+        },
+
+        close() {
+            console.log('ctxMenu: close');
+            this.isVisible = false;
+            this.targetItemName = null;
+            this.targetItemType = null;
+        },
+
+        onDelete() {
+            console.log('ctxMenu: onDelete', this.targetItemName, this.targetItemType);
+            this.$emit('delete', { name: this.targetItemName, type: this.targetItemType });
+            this.close();
+        },
+    },
+    beforeUnmount() {
+        clearTimeout(this._longTapTimer);
+        if (this._container) {
+            this._container.removeEventListener('contextmenu', this._onContextMenu);
+            this._container.removeEventListener('touchstart', this._onTouchStart);
+            this._container.removeEventListener('touchmove', this._onTouchMove);
+            this._container.removeEventListener('touchend', this._onTouchEnd);
+            this._container.removeEventListener('touchcancel', this._onTouchEnd);
+            this._container.removeEventListener('scroll', this._onScroll);
+        }
+        document.removeEventListener('click', this._onDocClick, true);
+        document.removeEventListener('keydown', this._onKeyDown);
+    },
+};
+</script>
+
+<style scoped>
+.ctxMenu {
+    position: fixed;
+    z-index: 9200;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    min-width: 120px;
+    padding: 4px 0;
+    user-select: none;
+}
+.ctxMenuItem {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.15s ease;
+}
+.ctxMenuItem:hover {
+    background-color: #f5f5f5;
+}
+.ctxMenuDanger {
+    color: #d32f2f;
+}
+</style>
