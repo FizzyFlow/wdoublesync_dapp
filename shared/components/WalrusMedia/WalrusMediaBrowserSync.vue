@@ -17,7 +17,7 @@
 
 <script>
 import EndlessVector from '@fizzyflow/endless-vector';
-import { WDoubleSync } from 'wdoublesync';
+import { WDoubleSync } from '@fizzyflow/wdoublesync';
 import WalrusMediaBrowser from './WalrusMediaBrowser.vue';
 import WalrusMediaDoubleSyncFolder from './includes/WalrusMediaDoubleSyncFolder.js';
 import Spinner from './helpers/Spinner.vue';

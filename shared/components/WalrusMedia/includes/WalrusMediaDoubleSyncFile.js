@@ -1,4 +1,4 @@
-import { DoubleSyncFile } from 'wdoublesync';
+import { DoubleSyncFile } from '@fizzyflow/doublesync';
 import WalrusMediaNanoThumb from './WalrusMediaNanoThumb.js';
 
 const MIME_BY_EXT = {

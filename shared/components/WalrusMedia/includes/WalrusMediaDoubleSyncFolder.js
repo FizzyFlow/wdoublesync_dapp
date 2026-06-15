@@ -1,4 +1,4 @@
-import { DoubleSyncFolder } from 'wdoublesync';
+import { DoubleSyncFolder } from '@fizzyflow/doublesync';
 import WalrusMediaDoubleSyncFile from './WalrusMediaDoubleSyncFile.js';
 import WalrusMediaRowBuilder from './WalrusMediaRowBuilder.js';
 import WalrusMediaBackButton from './WalrusMediaBackButton.js';
