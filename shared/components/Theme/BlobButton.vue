@@ -1,9 +1,10 @@
 <template>
-	<button
+	<component
+		:is="href ? 'a' : 'button'"
 		class="blobButton"
 		:class="{ 'blobButton--block': block }"
 		:style="cssVars"
-		type="button"
+		v-bind="href ? { href, target, rel: target === '_blank' ? 'noopener noreferrer' : undefined } : { type: 'button' }"
 		@click="$emit('click', $event)"
 	>
 		<span class="blobButton_blobs" aria-hidden="true">
@@ -17,7 +18,7 @@
 			<slot>{{ text }}</slot>
 		</span>
 		<q-icon v-if="icon && iconPosition === 'right'" :name="icon" class="blobButton_icon blobButton_icon--right" :size="resolvedIconSize" />
-	</button>
+	</component>
 </template>
 
 <script>
@@ -34,6 +35,8 @@ export default {
 			default: 'right',
 			validator: (v) => ['left', 'right'].includes(v),
 		},
+		href: { type: String, default: null },
+		target: { type: String, default: '_blank' },
 		block: { type: Boolean, default: false },
 		// Accepts any CSS length (e.g. '12px', '999px', '0.75rem') or a bare number (treated as px).
 		borderRadius: { type: [String, Number], default: '12px' },
@@ -146,6 +149,7 @@ export default {
 		color var(--q-transition-normal) ease,
 		transform var(--q-transition-fast) ease;
 
+	text-decoration: none;
 	-webkit-tap-highlight-color: transparent;
 	user-select: none;
 }

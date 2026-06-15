@@ -1,6 +1,8 @@
 # wdoublesync_dapp
 
-Demo dApp for [EndlessVectorWalrus](../endless_vector) + [WDoubleSync](../wdoublesync) — decentralized file storage, versioning, and sync on **Sui + Walrus + Seal**.
+Demo dApp for [EndlessVectorWalrus](https://github.com/FizzyFlow/endless_vector) + [WDoubleSync](https://github.com/FizzyFlow/wdoublesync) — decentralized file storage, versioning, and sync on **Sui + Walrus + Seal**.
+
+**Live demo:** [doublesync.wal.app](https://doublesync.wal.app/)
 
 ---
 
@@ -20,8 +22,8 @@ Files can optionally be **encrypted with Seal** before being uploaded to Walrus,
 | Blockchain | [@mysten/sui](https://github.com/MystenLabs/sui), [suidouble](https://github.com/suidouble/suidouble) |
 | Storage | [@mysten/walrus](https://github.com/MystenLabs/walrus) |
 | Encryption | [@mysten/seal](https://github.com/MystenLabs/seal) |
-| Vector SDK | [@fizzyflow/endless-vector](../endless_vector/js) (local) |
-| Sync engine | [wdoublesync](../wdoublesync) + [doublesync](../doublesync) (local) |
+| Vector SDK | [@fizzyflow/endless-vector](https://github.com/FizzyFlow/endless_vector) |
+| Sync engine | [wdoublesync](https://github.com/FizzyFlow/wdoublesync) + [doublesync](https://github.com/FizzyFlow/doublesync) |
 
 ---
 

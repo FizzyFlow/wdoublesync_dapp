@@ -59,8 +59,8 @@
                         text="Install CLI"
                         icon="terminal"
                         color="var(--lp-text-3)"
+                        href="https://github.com/FizzyFlow/wdoublesync_cli"
                         block
-                        @click="$emit('cli')"
                     />
                 </div>
 
@@ -182,7 +182,7 @@ function buildHexFloor({ R, seed }) {
 export default {
     name: 'LandingCallToAction',
     components: { BlobButton },
-    emits: ['launch', 'cli'],
+    emits: ['launch'],
     data() {
         return {
             viewW: VIEW_W,

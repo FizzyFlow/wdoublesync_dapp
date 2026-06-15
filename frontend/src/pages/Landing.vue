@@ -45,7 +45,7 @@
                             text="Get Started with CLI"
                             icon="terminal"
                             color="var(--lp-text-3)"
-                            @click="openCli"
+                            href="https://github.com/FizzyFlow/wdoublesync_cli"
                         />
                     </div>
 
@@ -69,7 +69,7 @@
 
         <LandingUseCases />
 
-        <LandingCallToAction @launch="launchApp" @cli="openCli" />
+        <LandingCallToAction @launch="launchApp" />
     </LandingShell>
 </template>
 
@@ -97,9 +97,6 @@ export default {
     methods: {
         launchApp() {
             this.$router.push('/select');
-        },
-        openCli() {
-            this.$router.push('/');
         },
         goHome() {
             this.$router.push('/');

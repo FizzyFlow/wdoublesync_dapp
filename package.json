@@ -10,8 +10,8 @@
     "clean": "rm -rf node_modules/.vite",
     "build": "node app.js build",
     "start": "node app.js run",
-    "deploywalrus": "site-builder deploy --epochs 15 ./frontend/dist ",
-    "updatewalrus": "site-builder deploy --object-id 0xAAAA --epochs 15 ./frontend/dist ",
+    "deploywalrus": "site-builder deploy --epochs 10 ./frontend/dist ",
+    "updatewalrus": "site-builder deploy --object-id 0x1245550ef606c9f5b380b0855ede847c4438b78cc41f99a3c0a1bea2c8fd5d0e --epochs 10 ./frontend/dist ",
     "deployheroku": "npm run build; (cd ./heroku && bash deploy.sh frontend wdoublesync)"
   },
   "author": "suidouble (https://github.com/suidouble)",
