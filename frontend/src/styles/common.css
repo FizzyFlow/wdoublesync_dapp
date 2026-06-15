@@ -27,3 +27,43 @@ h1, h2, h3, h4, h5, h6 {
 	margin: 0 0 12px 0;
 	margin-bottom: var(--q-h-bottom-margin, 12px);
 }
+
+/* ── scrollbars ───────────────────────────────────────────────
+   Slim, rounded, theme-aware. Firefox uses scrollbar-width/color;
+   WebKit (Chrome/Safari/Edge) uses the ::-webkit-scrollbar pseudos. */
+:root {
+	--sb-thumb: rgba(40, 70, 130, 0.28);
+	--sb-thumb-hover: rgba(40, 70, 130, 0.45);
+}
+body.body--dark {
+	--sb-thumb: rgba(170, 190, 230, 0.28);
+	--sb-thumb-hover: rgba(170, 190, 230, 0.45);
+}
+
+/* Firefox */
+html {
+	scrollbar-width: thin;
+	scrollbar-color: var(--sb-thumb) transparent;
+}
+
+/* WebKit */
+*::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+	background-color: var(--sb-thumb);
+	border-radius: 999px;
+	/* inset look: padding via transparent border so the thumb is slimmer */
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+	background-color: var(--sb-thumb-hover);
+}
+*::-webkit-scrollbar-corner {
+	background: transparent;
+}

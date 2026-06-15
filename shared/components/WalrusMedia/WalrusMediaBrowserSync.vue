@@ -106,12 +106,18 @@ export default {
             const items = [];
             for (let i = 0; i < ev._items.length; i++) {
                 const item = ev._items[i];
-                items.push({
+                const entry = {
                     index: ev.length - ev._items.length + i,
                     type: item.type,
                     size: item.size,
                     _raw: item,
-                });
+                };
+                if (item.type === 'blob' && item._blobData) {
+                    const b = item._blobData;
+                    entry.certifiedEpoch = b.certified_epoch ?? b.certifiedEpoch ?? null;
+                    entry.endEpoch = b.storage?.end_epoch ?? b.storage?.endEpoch ?? b.end_epoch ?? b.endEpoch ?? null;
+                }
+                items.push(entry);
             }
             return items;
         },

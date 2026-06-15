@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import { Varmory } from 'varmory';
 
 if (typeof globalThis.Buffer === 'undefined') {
     globalThis.Buffer = {
@@ -72,9 +73,11 @@ const router = createRouter({
 	routes: routes,
 });
 
-const app = createApp(App).use(Quasar, quasarSettings);
-app.use(createPinia());
-app.use(router);
+const app = createApp(App)
+	.use(Quasar, quasarSettings)
+	.use(createPinia())
+	.use(router)
+	.use(Varmory);
 
 app.config.globalProperties.$store = store();
 app.config.globalProperties.$log = Log;

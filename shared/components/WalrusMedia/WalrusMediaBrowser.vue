@@ -10,8 +10,8 @@
     >
         <WalrusMediaTopLeftMenu :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" :readOnly="readOnly" @filesSelected="onFilesSelected" />
 
-        <WalrusMediaTopRightMenu v-if="activeTab == 1" :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
-        <WalrusMediaTopRightMenu v-if="activeTab == 2" :walrusMediaFolder="currentFolder2" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
+        <WalrusMediaTopRightMenu v-if="activeTab == 1" ref="topMenu1" :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
+        <WalrusMediaTopRightMenu v-if="activeTab == 2" ref="topMenu2" :walrusMediaFolder="currentFolder2" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
 
         <div :style="{height: height}" style="position: relative; overflow: hidden; z-index: 500;">
             <WalrusMediaFolderView
@@ -22,6 +22,9 @@
                 :primaryColor="primaryColor"
                 ref="tab_1"
                 @itemClick="onItemClick"
+                @mkdir="onContextMakeDir"
+                @newFile="onContextNewFile"
+                @refresh="onContextRefresh"
             />
             <WalrusMediaFolderView
                 v-if="currentFolder2"
@@ -31,14 +34,17 @@
                 :primaryColor="primaryColor"
                 ref="tab_2"
                 @itemClick="onItemClick"
+                @mkdir="onContextMakeDir"
+                @newFile="onContextNewFile"
+                @refresh="onContextRefresh"
             />
         </div>
 
         <WalrusMediaBottomLeftMenu :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" />
 
         <div class="dropzoneContent" :class="{ 'visible': isDragging }">
-            <p>Walrus Media Browser Component</p>
-            <p class="dropzoneHint">Drop images or videos here</p>
+            <p>EndlessVectorWalrus</p>
+            <p class="dropzoneHint">Drop files here</p>
         </div>
 
         <div class="initializingOverlay" :class="{ 'visible': isInitializing }">
@@ -212,6 +218,18 @@ export default {
                 if (tabRef) tabRef.scrollToBottom();
             });
         },
+        onContextMakeDir() {
+            const menu = this.activeTab == 1 ? this.$refs.topMenu1 : this.$refs.topMenu2;
+            if (menu) menu.onMakeDir();
+        },
+        onContextNewFile() {
+            const menu = this.activeTab == 1 ? this.$refs.topMenu1 : this.$refs.topMenu2;
+            if (menu) menu.onNewFile();
+        },
+        onContextRefresh() {
+            const menu = this.activeTab == 1 ? this.$refs.topMenu1 : this.$refs.topMenu2;
+            if (menu) menu.onRefresh();
+        },
         onTextSaved() {
             this.$emit('change');
             this.editingTextItem = null;
@@ -270,17 +288,19 @@ export default {
     position: relative;
     height: 100%;
     min-height: 300px;
-    border: 2px dashed #ccc;
+    border: 2px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
     margin: 0;
     transition: all 0.3s ease;
     user-select: none;
     overflow: hidden;
+    border-radius: 8px;
 }
 
 .walrusMediaBrowser.draggingOver {
-    border-color: #4CAF50;
+    /* border-color: #4CAF50; */
+    border: 2px dashed #4CAF50;
     background-color: rgba(76, 175, 80, 0.5);
 }
 
@@ -299,6 +319,7 @@ export default {
     text-align: center;
     z-index: 10;
     opacity: 0;
+    border: none;
     pointer-events: none;
     transition: opacity 0.2s ease;
 }

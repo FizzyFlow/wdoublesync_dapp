@@ -14,29 +14,18 @@ const MIME_BY_EXT = {
     'xml': 'text/xml', 'csv': 'text/csv', 'log': 'text/plain',
 };
 
-/**
- * Binary layout (all little-endian):
- *   [0]      version (1)
- *   [1]      flags: bit0 = has thumbnail
- *   [2..3]   width  (uint16)
- *   [4..5]   height (uint16)
- *   [6..9]   duration × 100 (uint32, 0 if none)
- *   [10..11] thumbnail length (uint16)
- *   [12 .. 12+thumbLen-1] thumbnail bytes
- *   [12+thumbLen ..] raw media content
- */
-const HEADER_SIZE = 12;
-const VERSION = 1;
+const LEGACY_HEADER_SIZE = 12;
+const LEGACY_VERSION = 1;
 
 let _idCounter = 0;
 
 export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
-    constructor(name, content = new Uint8Array(0)) {
+    constructor(name, content = new Uint8Array(0), meta = null) {
         super();
         if (typeof name !== 'string' || !name) throw new Error('WalrusMediaDoubleSyncFile: name required');
         this._name = name;
         this._content = content instanceof Uint8Array ? content : new Uint8Array(0);
-        this._parsed = null;
+        this._meta = meta;
         this._previewUrls = {};
         this._folder = null;
         this.id = 'dsf_' + (++_idCounter) + '_' + Math.random().toString(36).substring(2, 8);
@@ -51,8 +40,9 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
     async setContent(bytes) {
         if (!(bytes instanceof Uint8Array)) throw new Error('setContent: bytes must be Uint8Array');
         this._content = bytes;
+        this._meta = null;
         this._parsed = null;
-        this._revokeUrls(); // content changed — old blob URL is stale
+        this._revokeUrls();
     }
 
     // ── UI compatibility (used by row builder / row item / viewer) ──
@@ -77,9 +67,8 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
     getTextContent() { return new TextDecoder().decode(this.mediaContent); }
 
     setTextContent(str) {
-        const bytes = new TextEncoder().encode(str);
-        const rebuilt = WalrusMediaDoubleSyncFile.create(this._name, bytes, {});
-        this._content = rebuilt._content;
+        this._content = new TextEncoder().encode(str);
+        this._meta = { width: 0, height: 0, duration: 0, thumbnail: null };
         this._parsed = null;
         this._revokeUrls();
     }
@@ -109,9 +98,9 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
     }
 
     /**
-     * Returns a preview URL at the given size. For the doublesync-backed file:
-     * - 'nano': data URL from the embedded nano thumbnail
-     * - 'low'/'micro'/'high': object URL from the full media content
+     * Returns a preview URL at the given size.
+     * 'nano' returns a data URL from the client-side thumbnail (if available),
+     * other sizes return an object URL from the full media content.
      */
     async getPreviewURL(size) {
         if (size === 'nano') {
@@ -134,26 +123,11 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
 
     static create(name, mediaBytes, meta = {}) {
         const { width = 0, height = 0, duration = 0, thumbnail = null } = meta;
-        const thumbBytes = thumbnail instanceof Uint8Array ? thumbnail : new Uint8Array(0);
-        const thumbLen = thumbBytes.length;
-
-        const buf = new Uint8Array(HEADER_SIZE + thumbLen + mediaBytes.length);
-        const view = new DataView(buf.buffer);
-
-        buf[0] = VERSION;
-        buf[1] = thumbLen > 0 ? 1 : 0;
-        view.setUint16(2, width, true);
-        view.setUint16(4, height, true);
-        view.setUint32(6, Math.round((duration || 0) * 100), true);
-        view.setUint16(10, thumbLen, true);
-        if (thumbLen) buf.set(thumbBytes, HEADER_SIZE);
-        buf.set(mediaBytes, HEADER_SIZE + thumbLen);
-
-        return new WalrusMediaDoubleSyncFile(name, buf);
+        return new WalrusMediaDoubleSyncFile(name, mediaBytes, { width, height, duration, thumbnail });
     }
 
     static fromRaw(name, content) {
-        return new WalrusMediaDoubleSyncFile(name, content);
+        return new WalrusMediaDoubleSyncFile(name, content, null);
     }
 
     // ── Internal ──
@@ -178,29 +152,37 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
     _parse() {
         if (this._parsed) return this._parsed;
 
-        if (this._content.length < HEADER_SIZE) {
-            this._parsed = { width: 0, height: 0, duration: 0, thumbnail: null, media: this._content };
+        if (this._meta) {
+            this._parsed = {
+                width: this._meta.width || 0,
+                height: this._meta.height || 0,
+                duration: this._meta.duration || 0,
+                thumbnail: this._meta.thumbnail || null,
+                media: this._content,
+            };
             return this._parsed;
         }
 
-        const view = new DataView(this._content.buffer, this._content.byteOffset, this._content.byteLength);
-        const version = this._content[0];
+        // Backward compat: detect legacy header [version=1, flags, w(2), h(2), dur(4), thumbLen(2)]
+        if (this._content.length >= LEGACY_HEADER_SIZE && this._content[0] === LEGACY_VERSION) {
+            const view = new DataView(this._content.buffer, this._content.byteOffset, this._content.byteLength);
+            const width = view.getUint16(2, true);
+            const height = view.getUint16(4, true);
+            const durationRaw = view.getUint32(6, true);
+            const duration = durationRaw ? durationRaw / 100 : 0;
+            const thumbLen = view.getUint16(10, true);
 
-        if (version !== VERSION) {
-            this._parsed = { width: 0, height: 0, duration: 0, thumbnail: null, media: this._content };
-            return this._parsed;
+            if (LEGACY_HEADER_SIZE + thumbLen <= this._content.length) {
+                const thumbnail = thumbLen > 0
+                    ? this._content.slice(LEGACY_HEADER_SIZE, LEGACY_HEADER_SIZE + thumbLen)
+                    : null;
+                const media = this._content.slice(LEGACY_HEADER_SIZE + thumbLen);
+                this._parsed = { width, height, duration, thumbnail, media };
+                return this._parsed;
+            }
         }
 
-        const width = view.getUint16(2, true);
-        const height = view.getUint16(4, true);
-        const durationRaw = view.getUint32(6, true);
-        const duration = durationRaw ? durationRaw / 100 : 0;
-        const thumbLen = view.getUint16(10, true);
-
-        const thumbnail = thumbLen > 0 ? this._content.slice(HEADER_SIZE, HEADER_SIZE + thumbLen) : null;
-        const media = this._content.slice(HEADER_SIZE + thumbLen);
-
-        this._parsed = { width, height, duration, thumbnail, media };
+        this._parsed = { width: 0, height: 0, duration: 0, thumbnail: null, media: this._content };
         return this._parsed;
     }
 }

@@ -392,11 +392,12 @@ const queryableFunctions = {
         }
         if (network) {
             state.network = network;
-            state.suiClient = makeSuiClient(network);
-            state.walrusClient = makeWalrusClient(network);
+            state.suiClient = await makeSuiClient(network);
+            state.walrusClient = await makeWalrusClient(network);
 
-            if (getAggregator(network)) {
-                state.aggregatorUrl = getAggregator(network);
+            const aggUrl = await getAggregator(network);
+            if (aggUrl) {
+                state.aggregatorUrl = aggUrl;
             }
 
             // const uploadRelayOptions = {

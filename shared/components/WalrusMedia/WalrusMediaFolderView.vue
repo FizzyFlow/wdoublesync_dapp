@@ -5,7 +5,7 @@
         :style="{zIndex: zIndex, minHeight: height, maxHeight: height, '--row-height': rowHeight }" ref="rowsContainer">
         <WalrusMediaBrowserRow v-for="(item, index) in rows" :row="item" :primaryColor="primaryColor" :key="item.id" ref="rows"
             @itemClick="onItemClick"  />
-        <WalrusMediaContextMenu ref="contextMenu" @delete="onDeleteItem" />
+        <WalrusMediaContextMenu ref="contextMenu" @delete="onDeleteItem" @mkdir="onMakeDir" @newFile="onNewFile" @refresh="onRefresh" />
     </div>
 </template>
 
@@ -73,8 +73,16 @@ export default {
             this.$emit('itemClick', item);
         },
         onDeleteItem({ name }) {
-            console.log('FolderView: onDeleteItem', name, 'folder:', this.walrusMediaFolder?.name);
             this.walrusMediaFolder.removeChild(name);
+        },
+        onMakeDir() {
+            this.$emit('mkdir');
+        },
+        onNewFile() {
+            this.$emit('newFile');
+        },
+        onRefresh() {
+            this.$emit('refresh');
         },
         async bringToFront() {
             this.isOnFront = true;
@@ -274,40 +282,20 @@ export default {
     right: 0px;
     position: absolute;
     max-height: 600px;
-    overflow-y: scroll;
+    overflow-y: auto;
     scroll-behavior: smooth;
-    padding-right: 0px;
 
     opacity: 0;
     transition: opacity .3s;
+
+    scrollbar-width: none;
+}
+
+.rowsContainer::-webkit-scrollbar {
+    display: none;
 }
 
 .rowsContainer.rowsContainerActive {
     opacity: 1;
-}
-
-/* Custom scrollbar styling */
-.rowsContainer::-webkit-scrollbar {
-    width: 10px;
-}
-
-.rowsContainer::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 5px;
-}
-
-.rowsContainer::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 5px;
-}
-
-.rowsContainer::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Firefox scrollbar styling */
-.rowsContainer {
-    scrollbar-width: thin;
-    scrollbar-color: #888 #f1f1f1;
 }
 </style>

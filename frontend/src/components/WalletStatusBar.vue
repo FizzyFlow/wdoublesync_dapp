@@ -1,7 +1,7 @@
 <template>
     <div class="walletStatusBar">
-        <q-btn size="sm" flat dense :color="selectedChain === 'testnet' ? 'orange' : 'grey-5'" label="testnet" @click="switchAndConnect('testnet')" />
-        <q-btn size="sm" flat dense :color="selectedChain === 'localnet' ? 'blue-grey' : 'grey-5'" label="localnet" @click="switchAndConnect('localnet')" />
+        <q-btn size="sm" flat dense :color="selectedChain === 'testnet' ? 'primary' : 'grey-5'" label="testnet" @click="switchAndConnect('testnet')" />
+        <q-btn size="sm" flat dense :color="selectedChain === 'localnet' ? 'primary' : 'grey-5'" label="localnet" @click="switchAndConnect('localnet')" />
         <q-btn v-if="!connectedAddress && selectedChain" size="sm" dense color="primary" label="Connect" @click="connect" />
         <transition name="wsb-fade">
             <span v-if="wrongChainWarning" class="wsb-wrongchain">wrong chain in wallet</span>
@@ -11,16 +11,23 @@
             <div class="wsb-disconnect" @click="disconnect" title="Disconnect wallet">&times;</div>
         </template>
         <SignInWithSui v-if="selectedChain" :defaultChain="selectedChain" :persist="true" @suiMaster="onSuiMaster" @disconnected="onDisconnected" @wrongchain="onWrongChain" ref="sui" :visible="false" />
+        <DarkChanger v-if="showDarkChanger" class="wsb-dark" size="sm" round color="primary" />
     </div>
 </template>
 
 <script>
 import { SignInWithSui } from 'vue-sui';
+import DarkChanger from 'shared/components/LayoutElements/DarkChanger.vue';
 
 export default {
     name: 'WalletStatusBar',
     components: {
         SignInWithSui,
+        DarkChanger,
+    },
+    props: {
+        // show the dark-mode toggle at the end of the bar
+        showDarkChanger: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -108,6 +115,11 @@ export default {
         display: flex;
         align-items: center;
         gap: 6px;
+    }
+
+    /* dark toggle sits after everything, with a little breathing room */
+    .wsb-dark {
+        margin-left: 10px;
     }
 
     .wsb-address {

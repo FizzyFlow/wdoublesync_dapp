@@ -59,7 +59,7 @@ import { getPackageId, normalizeNetworkName, makeSealClient } from 'shared/compo
 
 export default {
     name: 'Home',
-    path: '/',
+    path: '/home',
     components: {
         WalletStatusBar,
     },

@@ -1,7 +1,15 @@
 <template>
     <Teleport to="body">
         <div v-if="isVisible" class="ctxMenu" :style="{ left: posX + 'px', top: posY + 'px' }" @click.stop>
-            <div class="ctxMenuItem ctxMenuDanger" @click="onDelete">Delete</div>
+            <template v-if="mode === 'item'">
+                <div class="ctxMenuItem ctxMenuDanger" @click="onDelete">Delete</div>
+            </template>
+            <template v-else>
+                <div class="ctxMenuItem" @click="onMakeDir">Make Dir</div>
+                <div class="ctxMenuItem" @click="onNewFile">New File</div>
+                <div class="ctxMenuSep"></div>
+                <div class="ctxMenuItem" @click="onRefresh">Refresh</div>
+            </template>
         </div>
     </Teleport>
 </template>
@@ -14,12 +22,13 @@ const MENU_HEIGHT = 40;
 
 export default {
     name: 'WalrusMediaContextMenu',
-    emits: ['delete'],
+    emits: ['delete', 'mkdir', 'newFile', 'refresh'],
     data() {
         return {
             isVisible: false,
             posX: 0,
             posY: 0,
+            mode: 'item',
             targetItemName: null,
             targetItemType: null,
         };
@@ -31,7 +40,8 @@ export default {
             this._onContextMenu = (e) => {
                 const el = e.target.closest('[data-item-name]');
                 if (!el || el.dataset.itemType === 'back') {
-                    this.close();
+                    e.preventDefault();
+                    this._showBackground(e.clientX, e.clientY);
                     return;
                 }
                 e.preventDefault();
@@ -111,24 +121,46 @@ export default {
         },
 
         _show(el, x, y) {
+            this.mode = 'item';
             this.targetItemName = el.dataset.itemName;
             this.targetItemType = el.dataset.itemType;
             this.posX = Math.min(x, window.innerWidth - MENU_WIDTH - 8);
             this.posY = Math.min(y, window.innerHeight - MENU_HEIGHT - 8);
             this.isVisible = true;
-            console.log('ctxMenu: show', this.targetItemName, this.targetItemType, x, y);
+        },
+
+        _showBackground(x, y) {
+            this.mode = 'background';
+            this.targetItemName = null;
+            this.targetItemType = null;
+            this.posX = Math.min(x, window.innerWidth - MENU_WIDTH - 8);
+            this.posY = Math.min(y, window.innerHeight - MENU_HEIGHT * 3 - 8);
+            this.isVisible = true;
         },
 
         close() {
-            console.log('ctxMenu: close');
             this.isVisible = false;
             this.targetItemName = null;
             this.targetItemType = null;
         },
 
         onDelete() {
-            console.log('ctxMenu: onDelete', this.targetItemName, this.targetItemType);
             this.$emit('delete', { name: this.targetItemName, type: this.targetItemType });
+            this.close();
+        },
+
+        onMakeDir() {
+            this.$emit('mkdir');
+            this.close();
+        },
+
+        onNewFile() {
+            this.$emit('newFile');
+            this.close();
+        },
+
+        onRefresh() {
+            this.$emit('refresh');
             this.close();
         },
     },
@@ -170,5 +202,10 @@ export default {
 }
 .ctxMenuDanger {
     color: #d32f2f;
+}
+.ctxMenuSep {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 4px 0;
 }
 </style>

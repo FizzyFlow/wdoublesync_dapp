@@ -1,6 +1,9 @@
 <template>
-    <div>
-        <div class="splitContainer" v-if="vectorId">
+    <LandingShell class="vectorPage" @home="goHome">
+        <WalletStatusBar :show-dark-changer="true" />
+
+        <div class="vector" v-if="vectorId">
+        <div class="splitContainer">
             <div class="splitLeft">
                 <WalrusMediaBrowserSync
                     ref="browserSync"
@@ -15,17 +18,20 @@
                     :senderAddress="connectedAddress"
                     height="100%"
                     :rowHeight="'100px'"
-                    @close="goHome"
+                    @close="closeVector"
                     @pushed="onPushed"
                     @error="onError"
                     @ready="onReady"
                     @change="onChange"
-                    primaryColor="var(--q-secondary)"
+                    primaryColor="var(--lp-accent)"
                 />
             </div>
             <div class="splitRight">
                 <div class="statusPanel">
-                    <h6>EndlessVectorWalrus Status</h6>
+                    <h2 class="statusPanel_title">
+                        <q-icon name="insights" size="20px" class="statusPanel_titleIcon" />
+                        <span class="statusPanel_titleText">Vector status</span>
+                    </h2>
 
                     <div class="statusRow">
                         <span class="statusLabel">EndlessVectorWalrus ID</span>
@@ -97,6 +103,63 @@
                         <span class="statusValue">{{ formatBytes(filesystemSize) }}</span>
                     </div>
 
+                    <div class="statusRow" v-if="currentEpoch != null">
+                        <span class="statusLabel">Current epoch
+                            <span class="statusNote">Walrus system</span>
+                        </span>
+                        <span class="statusValue">{{ currentEpoch }}</span>
+                    </div>
+
+                    <div class="statusRow" v-if="minBlobEndEpoch != null">
+                        <span class="statusLabel">Walrus end epoch
+                            <span class="statusNote">soonest blob expiry</span>
+                        </span>
+                        <span class="statusValue statusValue--withAction">
+                            <span>
+                                {{ minBlobEndEpoch }}
+                                <span class="statusNote statusNote--inline" v-if="currentEpoch != null">
+                                    ({{ Math.max(0, minBlobEndEpoch - currentEpoch) }} epochs left)
+                                </span>
+                            </span>
+                            <q-btn
+                                dense flat round size="sm" icon="update"
+                                class="extendBtn"
+                                :loading="isExtending"
+                                :disable="!signAndExecuteTransaction || isExtending"
+                                title="Extend Walrus storage"
+                            >
+                                <q-menu anchor="bottom right" self="top right" @show="previewExtendCost">
+                                    <div class="extendMenu">
+                                        <div class="extendMenu_title">Extend storage</div>
+                                        <q-input
+                                            v-model.number="extendEpochs"
+                                            type="number"
+                                            dense outlined
+                                            min="1"
+                                            label="Epochs to add"
+                                        />
+                                        <div class="extendMenu_row">
+                                            New end epoch:
+                                            <strong>{{ minBlobEndEpoch + (Number(extendEpochs) || 0) }}</strong>
+                                        </div>
+                                        <div class="extendMenu_row" v-if="extendCost != null">
+                                            Est. cost: <strong>{{ formatCoin(extendCost) }} WAL</strong>
+                                        </div>
+                                        <q-btn
+                                            label="Extend"
+                                            color="primary"
+                                            dense
+                                            class="extendMenu_go"
+                                            :loading="isExtending"
+                                            :disable="!Number(extendEpochs) || Number(extendEpochs) < 1"
+                                            @click="extendBlobs"
+                                        />
+                                    </div>
+                                </q-menu>
+                            </q-btn>
+                        </span>
+                    </div>
+
                     <div class="statusRow" v-if="lastPushVersion">
                         <span class="statusLabel">Last push version</span>
                         <span class="statusValue">{{ lastPushVersion }}</span>
@@ -108,39 +171,36 @@
                     </div>
 
                     <div class="statusActions">
-                        <q-btn
-                            class="syncButton"
+                        <BlobButton
+                            text="Sync to chain"
+                            icon="cloud_upload"
+                            color="var(--lp-accent)"
+                            :disable="pendingChanges === 0 || !signAndExecuteTransaction || isSyncing"
                             @click="syncToChain"
-                            :loading="isSyncing"
-                            :disable="pendingChanges === 0 || !signAndExecuteTransaction"
-                        >
-                            Sync to chain
-                        </q-btn>
-
-                        <q-btn
-                            class="closeButton"
-                            flat
-                            @click="goHome"
-                        >
-                            Close
-                        </q-btn>
+                        />
                     </div>
 
                     <div class="itemsList" v-if="items.length">
-                        <h6>WDoubleSync Chunks</h6>
+                        <div class="itemsList_title">WDoubleSync Chunks</div>
                         <div class="itemRow" v-for="item in [...items].reverse()" :key="item.index" @click="selectedItem = item">
                             <span class="itemIndex">#{{ item.index }}</span>
                             <span class="itemType">{{ item.type === 'bytes' ? 'vector&lt;u8&gt;' : 'Walrus Blob' }}</span>
                             <span class="itemSize">{{ formatBytes(item.size) }}</span>
+                            <span class="itemEpochs" v-if="item.type === 'blob' && item.certifiedEpoch != null">
+                                e{{ item.certifiedEpoch }}<template v-if="item.endEpoch != null">&ndash;{{ item.endEpoch }}</template>
+                            </span>
                         </div>
                     </div>
+
+                    <q-inner-loading :showing="isSyncing" label="Syncing…" color="primary" class="statusLoading" />
                 </div>
             </div>
         </div>
+        </div>
 
         <div class="noVectorBlock" v-else>
-            <h6>No vector ID specified</h6>
-            <router-link to="/">Back to home</router-link>
+            <h2 class="noVectorBlock_title">No vector ID specified</h2>
+            <BlobButton text="Back to vectors" icon="arrow_forward" color="var(--lp-accent)" @click="$router.push('/select')" />
         </div>
 
         <EndlessVectorItemDetails
@@ -150,36 +210,20 @@
             @close="selectedItem = null"
         />
 
-        <q-btn
-            v-if="isLocalnet && connectedAddress"
-            class="faucetButton"
-            :loading="isFauceting"
-            @click="requestFaucet"
-            icon="water_drop"
-            round
-            color="blue"
-            title="Get SUI from faucet"
-        />
-        <q-btn
-            v-if="isLocalnet && connectedAddress"
-            class="walFaucetButton"
-            :loading="isWalFauceting"
-            @click="requestWalFaucet"
-            icon="toll"
-            round
-            color="orange"
-            title="Get WAL from faucet"
-        />
-
-        <WalletStatusBar />
-    </div>
+        <LocalnetFaucets @fauceted="fetchBalances" />
+    </LandingShell>
 </template>
 
 <script>
+import { toRaw } from 'vue';
+import EndlessVector from '@fizzyflow/endless-vector';
 import WalrusMediaBrowserSync from 'shared/components/WalrusMedia/WalrusMediaBrowserSync.vue';
 import EndlessVectorItemDetails from '../components/EndlessVectorItemDetails.vue';
 import SealSessionKeyButton from 'shared/components/WalrusMedia/helpers/SealSessionKeyButton.vue';
 import WalletStatusBar from '../components/WalletStatusBar.vue';
+import LandingShell from 'shared/components/Landing/LandingShell.vue';
+import BlobButton from 'shared/components/Theme/BlobButton.vue';
+import LocalnetFaucets from 'shared/components/Faucets/LocalnetFaucets.vue';
 import { getPackageId, makeWalrusClient, getAggregator, makeSealClient } from 'shared/components/WalrusMedia/includes/WalrusMediaClientsMaker.js';
 
 export default {
@@ -190,11 +234,12 @@ export default {
         EndlessVectorItemDetails,
         SealSessionKeyButton,
         WalletStatusBar,
+        LandingShell,
+        BlobButton,
+        LocalnetFaucets,
     },
     data() {
         return {
-            isFauceting: false,
-            isWalFauceting: false,
             isSyncing: false,
             packageId: null,
             walrusClient: null,
@@ -206,6 +251,10 @@ export default {
             lastError: null,
             patchCount: 0,
             totalBytes: 0,
+            currentEpoch: null,
+            extendEpochs: 10,
+            extendCost: null,
+            isExtending: false,
             items: [],
             selectedItem: null,
             isEncrypted: false,
@@ -253,9 +302,6 @@ export default {
                 return resp.digest || null;
             };
         },
-        isLocalnet() {
-            return this.connectedChain?.includes('localnet') || this.connectedChain?.includes('local');
-        },
         networkName() {
             const chain = this.connectedChain || this.hashNetwork || '';
             const n = chain.toLowerCase().replace('sui:', '');
@@ -266,6 +312,14 @@ export default {
         },
         explorerUrl() {
             return `https://explorer.polymedia.app/object/${this.vectorId}?network=${this.networkName}`;
+        },
+        // Soonest Walrus storage expiry across the vector's blob items (min end_epoch),
+        // or null when the vector holds no blobs.
+        minBlobEndEpoch() {
+            const ends = this.items
+                .filter(it => it.type === 'blob' && it.endEpoch != null)
+                .map(it => Number(it.endEpoch));
+            return ends.length ? Math.min(...ends) : null;
         },
     },
     watch: {
@@ -284,6 +338,7 @@ export default {
                     this.aggregatorUrl = aggUrl;
                     this.packageId = pkgId;
                     this.sealClient = sClient;
+                    this.fetchCurrentEpoch();
                 }
             },
         },
@@ -293,6 +348,13 @@ export default {
         connectedAddress: {
             immediate: true,
             handler() { this.fetchBalances(); },
+        },
+        walrusClient() {
+            this.fetchCurrentEpoch();
+        },
+        extendEpochs() {
+            // refresh the cost estimate while the extend menu is open
+            this.previewExtendCost();
         },
     },
     methods: {
@@ -305,6 +367,7 @@ export default {
                 this.isEncrypted = stats.isEncrypted || false;
             }
             this.updateFilesystemSize();
+            this.fetchCurrentEpoch();
         },
         onChange() {
             this.pendingChanges++;
@@ -320,6 +383,7 @@ export default {
             this.syncStatus = 'synced';
             this.lastError = null;
             this.fetchBalances();
+            this.fetchCurrentEpoch();
         },
         onError(err) {
             this.lastError = err?.message || String(err);
@@ -331,33 +395,6 @@ export default {
             this.isSyncing = true;
             await sync.push();
             this.isSyncing = false;
-        },
-        async requestFaucet() {
-            this.isFauceting = true;
-            try {
-                await this.$store.sui.suiMaster.requestSuiFromFaucet();
-            } catch (err) {
-                console.error('Faucet error:', err);
-            } finally {
-                this.isFauceting = false;
-                this.fetchBalances();
-            }
-        },
-        async requestWalFaucet() {
-            this.isWalFauceting = true;
-            try {
-                const res = await fetch('http://localhost:8099/v1/wal-faucet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address: this.connectedAddress }),
-                });
-                if (!res.ok) throw new Error(await res.text());
-            } catch (err) {
-                console.error('WAL faucet error:', err);
-            } finally {
-                this.isWalFauceting = false;
-                this.fetchBalances();
-            }
         },
         resetStatus() {
             this.syncStatus = 'idle';
@@ -411,6 +448,89 @@ export default {
                 this.walBalance = walEntry ? BigInt(walEntry.balance) : 0n;
             } catch { this.walBalance = 0n; }
         },
+        // Build a write-capable EndlessVector for this vector, with raw (non-proxied)
+        // clients so the SDK's private-field access works.
+        _makeExtendEv() {
+            return new EndlessVector({
+                suiClient: toRaw(this.suiClient),
+                id: this.vectorId,
+                packageId: this.packageId,
+                signAndExecuteTransaction: this.signAndExecuteTransaction || undefined,
+                walrusClient: toRaw(this.walrusClient) || undefined,
+                senderAddress: this.connectedAddress || undefined,
+                aggregatorUrl: this.aggregatorUrl || undefined,
+            });
+        },
+        // Target epoch the soonest-expiring blob will be extended to.
+        extendTargetEpoch() {
+            const n = Number(this.extendEpochs) || 0;
+            return this.minBlobEndEpoch != null ? this.minBlobEndEpoch + n : null;
+        },
+        async previewExtendCost() {
+            this.extendCost = null;
+            const target = this.extendTargetEpoch();
+            if (target == null || !this.walrusClient) return;
+            try {
+                const ev = this._makeExtendEv();
+                this.extendCost = await ev.walrus.extendBlobsCostToEpoch(target);
+            } catch (err) {
+                console.error('Extend cost preview failed:', err);
+            }
+        },
+        async extendBlobs() {
+            const target = this.extendTargetEpoch();
+            if (target == null) return;
+            this.isExtending = true;
+            try {
+                const ev = this._makeExtendEv();
+                await ev.walrus.extendBlobsToEpoch(target);
+                // refresh epochs / items / balances from chain
+                await ev.initialize();
+                this.items = ev._items.map((item, i) => {
+                    const entry = {
+                        index: ev.length - ev._items.length + i,
+                        type: item.type,
+                        size: item.size,
+                        _raw: item,
+                    };
+                    if (item.type === 'blob' && item._blobData) {
+                        const b = item._blobData;
+                        entry.certifiedEpoch = b.certified_epoch ?? b.certifiedEpoch ?? null;
+                        entry.endEpoch = b.storage?.end_epoch ?? b.storage?.endEpoch ?? b.end_epoch ?? b.endEpoch ?? null;
+                    }
+                    return entry;
+                });
+                this.fetchCurrentEpoch();
+                this.fetchBalances();
+                this.$q?.notify?.({ type: 'positive', message: `Extended storage to epoch ${target}`, position: 'top' });
+            } catch (err) {
+                console.error('Extend failed:', err);
+                this.$q?.notify?.({ type: 'negative', message: 'Extend failed: ' + (err?.message || err), position: 'top' });
+            } finally {
+                this.isExtending = false;
+                this.extendCost = null;
+            }
+        },
+        async fetchCurrentEpoch() {
+            if (!this.walrusClient) return;
+            // WalrusClient uses private (#) fields, which break when accessed through a Vue
+            // reactive Proxy — unwrap to the raw instance before calling its methods.
+            const client = toRaw(this.walrusClient);
+            try {
+                // Canonical "current epoch" per the Walrus SDK is the staking state's epoch
+                // (see WalrusClient — it reads stakingState.epoch as the current epoch).
+                // systemState().committee.epoch can lag on localnet, so prefer staking.
+                const staking = await client.stakingState();
+                if (staking?.epoch != null) {
+                    this.currentEpoch = Number(staking.epoch);
+                    return;
+                }
+                const system = await client.systemState();
+                this.currentEpoch = system?.committee?.epoch != null ? Number(system.committee.epoch) : null;
+            } catch (err) {
+                console.error('Failed to read Walrus current epoch:', err);
+            }
+        },
         formatCoin(balance) {
             if (balance === null) return '';
             const val = Number(balance) / 1e9;
@@ -428,6 +548,9 @@ export default {
         goHome() {
             this.$router.push('/');
         },
+        closeVector() {
+            this.$router.push('/select');
+        },
     },
     mounted() {
         if (!this.connectedChain) {
@@ -443,11 +566,36 @@ export default {
 </script>
 
 <style>
+    /* wallet bar → top-right pill, matching the landing */
+    .vectorPage .walletStatusBar {
+        position: fixed;
+        top: 18px;
+        right: 24px;
+        bottom: auto;
+        left: auto;
+        z-index: 100;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--lp-badge-border);
+        background: var(--lp-badge-bg);
+        backdrop-filter: blur(6px);
+    }
+
+    /* gutter on the outer element + centred max-width inner → aligns with the
+       header/hero (which use the same structure) */
+    .vector {
+        padding: 0 24px;
+        margin-top: 24px;
+    }
+
     .splitContainer {
         display: flex;
-        height: calc(100vh - 40px);
-        padding: 20px;
         gap: 20px;
+        max-width: 1600px;
+        margin: 0 auto;
+        height: calc(100vh - 174px);
+        min-height: 480px;
     }
 
     .splitLeft {
@@ -464,16 +612,38 @@ export default {
     }
 
     .statusPanel {
-        padding: 20px;
-        border: 1px solid #333;
-        border-radius: 8px;
-        background: #ffffff;
+        position: relative;
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid var(--lp-card-border);
+        background: var(--lp-card-bg);
+        box-shadow: var(--lp-card-shadow);
     }
 
-    .statusPanel h6 {
-        margin: 0 0 16px 0;
-        font-size: 16px;
-        font-weight: 600;
+    .statusPanel_title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-family: var(--font-display, inherit);
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 18px;
+        letter-spacing: -0.3px;
+        margin: 0 0 16px;
+    }
+
+    .statusPanel_titleIcon {
+        flex: none;
+        color: var(--lp-accent);
+        filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lp-accent) 35%, transparent));
+    }
+
+    .statusPanel_titleText {
+        background: linear-gradient(95deg, var(--lp-text) 0%, var(--lp-text) 35%, var(--lp-accent) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
     }
 
     .statusRow {
@@ -481,42 +651,76 @@ export default {
         justify-content: space-between;
         align-items: center;
         padding: 8px 0;
-        border-bottom: 1px solid #2a2a2a;
+        border-bottom: 1px solid var(--lp-divider);
     }
 
     .statusNote {
         display: block;
         font-size: 10px;
-        color: #aaa;
+        color: var(--lp-text-faint);
         font-weight: 400;
+    }
+
+    .statusNote--inline {
+        display: inline;
+        margin-left: 4px;
+    }
+
+    .statusValue--withAction {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .extendMenu {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 210px;
+    }
+
+    .extendMenu_title {
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .extendMenu_row {
+        font-size: 12px;
+        color: var(--lp-text-3);
+    }
+
+    .extendMenu_go {
+        margin-top: 4px;
     }
 
     .statusLabel {
         font-size: 12px;
-        color: #888;
+        color: var(--lp-text-3);
     }
 
     .statusValue {
         font-size: 12px;
         font-weight: 500;
+        color: var(--lp-text);
     }
 
     .statusMono {
-        font-family: monospace;
+        font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
     }
 
     .statusError {
         color: #e53935;
     }
 
-    .status-ready { color: #4caf50; }
-    .status-synced { color: #4caf50; }
+    .status-ready { color: #2e9e54; }
+    .status-synced { color: #2e9e54; }
     .status-modified { color: #ff9800; }
     .status-syncing { color: #2196f3; }
     .status-error { color: #e53935; }
-    .status-loading, .status-idle { color: #888; }
-    .status-encrypted { color: #4caf50; }
-    .status-unencrypted { color: #888; }
+    .status-loading, .status-idle { color: var(--lp-text-3); }
+    .status-encrypted { color: #2e9e54; }
+    .status-unencrypted { color: var(--lp-text-3); }
 
     .balanceBadges {
         display: inline-flex;
@@ -527,9 +731,10 @@ export default {
     .balanceBadge {
         font-size: 10px;
         padding: 1px 5px;
-        border-radius: 3px;
-        background: #f0f0f0;
-        color: #555;
+        border-radius: 999px;
+        background: var(--lp-badge-bg);
+        border: 1px solid var(--lp-badge-border);
+        color: var(--lp-text-3);
         font-family: inherit;
     }
 
@@ -540,53 +745,34 @@ export default {
     .statusActions {
         display: flex;
         flex-direction: column;
+        align-items: flex-start;
         gap: 10px;
         margin-top: 20px;
     }
 
-    .syncButton {
-        background-color: var(--q-primary);
-        color: white;
-        font-weight: 600;
-        font-size: 12px;
-    }
-
-    .syncButton:hover {
-        background-color: color-mix(in srgb, var(--q-primary) 90%, transparent);
-    }
-
-    .closeButton {
-        font-size: 12px;
-        color: #888;
+    .statusLoading {
+        border-radius: 16px;
     }
 
     .noVectorBlock {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
         text-align: center;
-        margin-top: 100px;
+        margin-top: 120px;
     }
 
-    .noVectorBlock a {
-        color: #8f4500;
-        margin-top: 10px;
-        display: inline-block;
-    }
-
-    .faucetButton {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 100;
-    }
-
-    .walFaucetButton {
-        position: fixed;
-        bottom: 20px;
-        right: 75px;
-        z-index: 100;
+    .noVectorBlock_title {
+        font-family: var(--font-display, inherit);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--lp-text);
+        margin: 0;
     }
 
     .explorerLink {
-        color: #8f4500;
+        color: var(--lp-accent);
         text-decoration: none;
         margin-left: 4px;
     }
@@ -597,43 +783,50 @@ export default {
 
     .itemsList {
         margin-top: 20px;
-        border-top: 1px solid #2a2a2a;
+        border-top: 1px solid var(--lp-divider);
         padding-top: 16px;
         max-height: 300px;
         overflow-y: auto;
     }
 
-    .itemsList h6 {
+    .itemsList_title {
         margin: 0 0 10px 0;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
+        color: var(--lp-text-2);
     }
 
     .itemRow {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 4px 0;
+        padding: 5px 8px;
+        border-radius: 8px;
         font-size: 12px;
-        font-family: monospace;
+        font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
         cursor: pointer;
     }
 
     .itemRow:hover {
-        background-color: #f5f5f5;
+        background-color: var(--lp-badge-bg);
     }
 
     .itemIndex {
-        color: #888;
+        color: var(--lp-text-3);
         min-width: 30px;
     }
 
     .itemType {
-        color: #4caf50;
+        color: var(--lp-accent);
         min-width: 50px;
     }
 
     .itemSize {
-        color: #aaa;
+        color: var(--lp-text-faint);
+    }
+
+    .itemEpochs {
+        color: var(--lp-teal);
+        font-size: 11px;
     }
 </style>
