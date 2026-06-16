@@ -2,9 +2,9 @@
     <header class="landingHeader">
         <div class="landingHeader_inner">
             <a class="landingHeader_brand" href="/" @click.prevent="$emit('home')">
-                <img src="/logo.png" class="landingHeader_logo" alt="WDoubleSync logo" />
+                <img src="/logo.png" class="landingHeader_logo" alt="DoubleSync logo" />
                 <span class="landingHeader_word">
-                    <span class="landingHeader_word--main">WDouble</span><span class="landingHeader_word--accent">Sync</span>
+                    <span class="landingHeader_word--main">Double</span><span class="landingHeader_word--accent">Sync</span>
                 </span>
             </a>
         </div>

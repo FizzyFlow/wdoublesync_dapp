@@ -41,7 +41,7 @@
                         <span class="cta_title--accent">Always private. Always yours.</span>
                     </h2>
                     <p class="cta_sub">
-                        WDoubleSync is the private, versioned, on-chain
+                        DoubleSync is the private, versioned, on-chain
                         filesystem for the decentralized future.
                     </p>
                 </div>

@@ -50,7 +50,7 @@ export function makeWalrusClient(params = {}) {
     const walrusClient = new WalrusClient({
         network: network,
         suiClient: suiClient,
-        wasmUrl: 'https://unpkg.com/@mysten/walrus-wasm@0.1.1/web/walrus_wasm_bg.wasm',
+        wasmUrl: 'https://unpkg.com/@mysten/walrus-wasm@0.2.2/web/walrus_wasm_bg.wasm',
         uploadRelay: uploadRelayOptions,
         storageNodeClientOptions: {
             fetch: async (url, options) => {

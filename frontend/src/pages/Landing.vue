@@ -23,7 +23,7 @@
                     </p>
 
                     <p class="hero_body">
-                        WDoubleSync is a decentralized filesystem for users,
+                        DoubleSync is a decentralized filesystem for users,
                         apps, and AI agents — private by default, recoverable
                         by design, and accessible from the web, the CLI,
                         or your own code.
@@ -50,7 +50,9 @@
                     </div>
 
                     <p class="hero_footer">
-                        Open source · MIT License · Built for the decentralized future
+                        <a href="https://github.com/FizzyFlow/wdoublesync" target="_blank" rel="noopener noreferrer">
+                            Open source</a> · Built for the decentralized future
+                        
                     </p>
                 </div>
 
