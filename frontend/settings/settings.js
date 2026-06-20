@@ -1,4 +1,4 @@
 
 export default {
-    appName: 'EndlessVectorWalrus',
+    appName: 'DoubleSync',
 };

@@ -1,5 +1,6 @@
 <template>
     <div class="walletStatusBar">
+        <q-btn size="sm" flat dense :color="selectedChain === 'mainnet' ? 'primary' : 'grey-5'" label="mainnet" @click="switchAndConnect('mainnet')" />
         <q-btn size="sm" flat dense :color="selectedChain === 'testnet' ? 'primary' : 'grey-5'" label="testnet" @click="switchAndConnect('testnet')" />
         <q-btn size="sm" flat dense :color="selectedChain === 'localnet' ? 'primary' : 'grey-5'" label="localnet" @click="switchAndConnect('localnet')" />
         <q-btn v-if="!connectedAddress && selectedChain" size="sm" dense color="primary" label="Connect" @click="connect" />

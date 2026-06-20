@@ -63,6 +63,9 @@ export default class WalrusMediaDoubleSyncFile extends DoubleSyncFile {
         const m = this.mimeType;
         return m.startsWith('text/') || m === 'application/json';
     }
+    get isFile() {
+        return !this.isText && !this.isImage;
+    }
 
     getTextContent() { return new TextDecoder().decode(this.mediaContent); }
 

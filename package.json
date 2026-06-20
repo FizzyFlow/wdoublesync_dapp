@@ -11,7 +11,7 @@
     "build": "node app.js build",
     "start": "node app.js run",
     "deploywalrus": "site-builder deploy --epochs 10 ./frontend/dist ",
-    "updatewalrus": "site-builder deploy --object-id 0xca8d8dc60bb3c9759b839b5579bfbe3d4b80e1a34349b6cf4969d4f5fd2dcfaa --epochs 10 ./frontend/dist ",
+    "updatewalrus": "site-builder deploy --ws-resources ./ws-resources.json --epochs 10 ./frontend/dist ",
     "deployheroku": "npm run build; (cd ./heroku && bash deploy.sh frontend wdoublesync)"
   },
   "author": "suidouble (https://github.com/suidouble)",
@@ -24,7 +24,7 @@
     "fastify": "^4.29.1"
   },
   "devDependencies": {
-    "@fizzyflow/endless-vector": "^0.0.12",
+    "@fizzyflow/endless-vector": "^0.0.13",
     "@mysten/seal": "^1.1.3",
     "@mysten/sui": "^2.17.0",
     "@mysten/walrus": "^1.1.7",
@@ -46,7 +46,7 @@
     "vue-router": "^4.6.3",
     "vue-sui": "2.17.0-3",
     "walrus-seal-client-with-local": "file:../seal_walrus_localnet",
-    "@fizzyflow/wdoublesync": "^0.1.2"
+    "@fizzyflow/wdoublesync": "^0.1.7"
   },
   "eslintConfig": {
     "root": true,

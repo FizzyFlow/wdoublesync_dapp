@@ -27,12 +27,25 @@
                             Spin up a fresh EndlessVectorWalrus<EvwInfo /> — the network is
                             set by your wallet extension when you connect.
                         </p>
-                        <q-checkbox
-                            v-model="encryptWithSeal"
-                            label="Encrypt with Seal"
-                            dense
-                            class="select_seal"
-                        />
+                        <div class="select_sealWrapper">
+                            <q-checkbox
+                                v-model="encryptWithSeal"
+                                label="Encrypt with Seal"
+                                dense
+                                class="select_seal"
+                                :disable="isMainnet"
+                            />
+                            <q-icon
+                                v-if="isMainnet"
+                                name="help"
+                                size="20px"
+                                class="select_sealHelp"
+                            >
+                                <q-tooltip>
+                                    Waiting for mainnet Seal servers keys from Mysten Labs. Please test it on testnet for now.
+                                </q-tooltip>
+                            </q-icon>
+                        </div>
                         <BlobButton
                             :text="connectedAddress ? 'Create New Vector' : 'Connect Wallet'"
                             :icon="connectedAddress ? 'add' : 'account_balance_wallet'"
@@ -156,6 +169,9 @@ export default {
         networkName() {
             return normalizeNetworkName(this.connectedChain);
         },
+        isMainnet() {
+            return this.networkName === 'mainnet';
+        },
         canCreate() {
             return !!(this.connectedAddress && this.suiClient && this.packageId);
         },
@@ -173,10 +189,14 @@ export default {
                     await new Promise((r) => setTimeout(r, 100));
                 }
             }
-            if (!this.canCreate) return;
+            if (!this.canCreate) {
+                console.error('[createVector] Cannot create: connectedAddress=', this.connectedAddress, 'suiClient=', this.suiClient, 'packageId=', this.packageId);
+                return;
+            }
 
             this.isCreating = true;
             try {
+                console.log('[createVector] Starting creation on:', this.networkName, 'with packageId:', this.packageId);
                 const signAndExecuteTransaction = async (tx) =>
                     this.$store.sui.suiMaster.signAndExecuteTransaction({ transaction: tx });
 
@@ -191,7 +211,12 @@ export default {
                 const ev = await EndlessVector.create(createParams);
                 this.$router.push('/vector#' + this.networkName + ':' + ev.id);
             } catch (err) {
-                console.error('Failed to create vector:', err);
+                console.error('[createVector] Failed:', err);
+                this.$q.notify({
+                    type: 'negative',
+                    message: 'Failed to create vector: ' + (err?.message || String(err)),
+                    position: 'top',
+                });
             } finally {
                 this.isCreating = false;
             }
@@ -367,9 +392,25 @@ export default {
     color: var(--lp-text-2);
 }
 
+.select_sealWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
 .select_seal {
     color: var(--lp-text-2);
-    margin-bottom: 16px;
+}
+
+.select_sealHelp {
+    color: var(--lp-text-faint);
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.select_sealHelp :deep(.q-tooltip__inner) {
+    font-size: 12px;
 }
 
 .select_input {

@@ -1,0 +1,20 @@
+{
+  "headers": {
+    "/*.png": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.woff": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    },
+    "/*.woff2": {
+      "Cache-Control": "public, max-age=31536000, immutable"
+    }
+  },
+  "routes": {
+    "/select": "/index.html",
+    "/vector": "/index.html",
+    "/vector/*": "/index.html"
+  },
+  "site_name": "DoubleSync",
+  "object_id": "0x94dfb9d5dedaf7d3c650507849a225059725f948443eac0b63acaf936a72489d"
+}

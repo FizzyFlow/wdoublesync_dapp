@@ -22,6 +22,13 @@
                 {{ item.name }}
             </div>
         </div>
+        <div class="rowItemFolder"
+            v-else-if="isFile">
+            <FileIcon class="rowItemIcon" :color="primaryColor" />
+            <div class="rowItemFolderTitle" :style="{ color: primaryColor }">
+                {{ item.name }}
+            </div>
+        </div>
         <div class="imageContainer" :class="{ contain: shouldHaveBack }"
             v-else>
             <img
@@ -220,6 +227,7 @@
 <script>
 import FolderIcon from './helpers/FolderIcon.vue';
 import TextFileIcon from './helpers/TextFileIcon.vue';
+import FileIcon from './helpers/FileIcon.vue';
 import { toRaw } from 'vue';
 
 export default {
@@ -227,6 +235,7 @@ export default {
     components: {
         FolderIcon,
         TextFileIcon,
+        FileIcon,
     },
     props: {
         item: Object,
@@ -348,6 +357,9 @@ export default {
         },
         duration() {
             return this.item?.durationFormatted || null;
+        },
+        isFile() {
+            return this.item.isFile || false;
         }
     },
 }

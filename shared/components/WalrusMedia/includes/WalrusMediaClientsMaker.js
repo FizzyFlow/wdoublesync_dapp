@@ -48,5 +48,10 @@ export const getPackageId = async (network) => {
         const wsc = await makeWalrusSealClient(network);
         return wsc.config?.walrus?.packageId;
     }
-    return EndlessVector.getPackageId(n) || n;
+    const pkgId = EndlessVector.getPackageId(n);
+    if (!pkgId) {
+        console.warn(`[getPackageId] EndlessVector.getPackageId('${n}') returned null/undefined`);
+        throw new Error(`No package ID available for network: ${n}`);
+    }
+    return pkgId;
 };

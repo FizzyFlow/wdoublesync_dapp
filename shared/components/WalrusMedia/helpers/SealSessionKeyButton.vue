@@ -46,6 +46,7 @@ export default {
         suiClient: { type: Object, required: true },
         packageId: { type: String, required: true },
         suiMaster: { type: Object, required: true },
+        sessionKey: { type: Object, required: false, default: null },
     },
     emits: ['created', 'cleared'],
     data() {
@@ -123,6 +124,21 @@ export default {
             if (this._expiryTimer) {
                 clearInterval(this._expiryTimer);
                 this._expiryTimer = null;
+            }
+        },
+    },
+    watch: {
+        sessionKey(newKey) {
+            if (newKey) {
+                this._sessionKey = newKey;
+                this.hasSessionKey = true;
+                this.isExpired = false;
+                this._startExpiryCheck();
+            } else {
+                this._sessionKey = null;
+                this.hasSessionKey = false;
+                this.isExpired = false;
+                this._stopExpiryCheck();
             }
         },
     },

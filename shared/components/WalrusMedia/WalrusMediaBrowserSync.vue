@@ -1,17 +1,32 @@
 <template>
     <WalrusMediaBrowser
         v-if="rootFolder"
+        ref="browser"
         :rootFolder="rootFolder"
         :readOnly="readOnly"
         :height="height"
         :rowHeight="rowHeight"
         :primaryColor="primaryColor"
+        :isPolling="isPolling"
         @change="onChanged"
         @close="$emit('close')"
+        @togglePolling="onTogglePolling"
     />
     <div v-else class="walrusMediaBrowserSyncLoading">
         <Spinner :size="36" />
-        <span v-if="status === 'encrypted'" class="walrusMediaBrowserSyncHint">Waiting for Seal Session Key...</span>
+        <div v-if="status === 'encrypted'" class="walrusMediaBrowserSyncHintWrapper">
+            <span class="walrusMediaBrowserSyncHint">Waiting for Seal Session Key...</span>
+            <SealSessionKeyButton
+                v-if="suiMaster && packageId"
+                :suiClient="suiClient"
+                :packageId="packageId"
+                :suiMaster="suiMaster"
+                :sessionKey="sessionKey"
+                @created="$emit('sessionKeyCreated', $event)"
+                @cleared="$emit('sessionKeyCleared')"
+                class="walrusMediaBrowserSyncButton"
+            />
+        </div>
     </div>
 </template>
 
@@ -20,6 +35,7 @@ import EndlessVector from '@fizzyflow/endless-vector';
 import { WDoubleSync } from '@fizzyflow/wdoublesync';
 import WalrusMediaBrowser from './WalrusMediaBrowser.vue';
 import WalrusMediaDoubleSyncFolder from './includes/WalrusMediaDoubleSyncFolder.js';
+import SealSessionKeyButton from './helpers/SealSessionKeyButton.vue';
 import Spinner from './helpers/Spinner.vue';
 import { toRaw } from 'vue';
 
@@ -27,6 +43,7 @@ export default {
     name: 'WalrusMediaBrowserSync',
     components: {
         WalrusMediaBrowser,
+        SealSessionKeyButton,
         Spinner,
     },
     props: {
@@ -67,6 +84,11 @@ export default {
             required: false,
             default: null,
         },
+        suiMaster: {
+            type: Object,
+            required: false,
+            default: null,
+        },
         sessionKey: {
             type: Object,
             required: false,
@@ -88,12 +110,13 @@ export default {
             default: '#2196F3',
         },
     },
-    emits: ['ready', 'pushed', 'error', 'close', 'change'],
+    emits: ['ready', 'pushed', 'error', 'close', 'change', 'sessionKeyCreated', 'sessionKeyCleared'],
     data() {
         return {
             rootFolder: null,
             isSaving: false,
             status: 'loading',
+            isPolling: false,
         };
     },
     computed: {
@@ -171,6 +194,7 @@ export default {
 
             this._rawFolder = folder;
             this.rootFolder = folder;
+            this._knownLength = ev.length;
             this.status = 'ready';
             this.$emit('ready', {
                 patchCount: ev.length,
@@ -211,11 +235,63 @@ export default {
                 this.$emit('change');
             }, 300);
         },
+        onTogglePolling() {
+            this.isPolling = !this.isPolling;
+            if (this.isPolling) {
+                this._startPolling();
+            } else {
+                this._stopPolling();
+            }
+        },
+        _startPolling() {
+            this._pollingBusy = false;
+            this._pollingInterval = setInterval(() => this._doPoll(), 1000);
+        },
+        _stopPolling() {
+            if (this._pollingInterval) {
+                clearInterval(this._pollingInterval);
+                this._pollingInterval = null;
+            }
+        },
+        async _doPoll() {
+            if (this._pollingBusy) return;
+            this._pollingBusy = true;
+            try {
+                const ev = this._ev;
+                const wdsync = this._wDoubleSync;
+                if (!ev || !wdsync) return;
+
+                ev.reInitialize();
+                await ev.initialize();
+                if (ev.length <= this._knownLength) return;
+
+                const memFolder = await wdsync.restore();
+                this._knownLength = ev.length;
+
+                const newFolder = WalrusMediaDoubleSyncFolder.fromMemoryFolder(memFolder);
+                newFolder.on('save', () => this.push());
+                await newFolder.load();
+                this._rawFolder = newFolder;
+
+                wdsync.reInitialize();
+
+                if (this.$refs.browser) {
+                    await this.$refs.browser.reinitialize(newFolder);
+                }
+            } catch (err) {
+                console.error('[BrowserSync] poll failed:', err);
+            } finally {
+                this._pollingBusy = false;
+            }
+        },
     },
     mounted() {
         if (this.packageId && this.suiClient) {
             this.initialize();
         }
+    },
+    unmounted() {
+        this._stopPolling();
     },
     watch: {
         packageId() {
@@ -253,8 +329,18 @@ export default {
     gap: 12px;
     min-height: 200px;
 }
+.walrusMediaBrowserSyncHintWrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .walrusMediaBrowserSyncHint {
     font-size: 13px;
     color: #888;
+}
+
+.walrusMediaBrowserSyncButton {
+    flex-shrink: 0;
 }
 </style>

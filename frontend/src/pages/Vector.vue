@@ -10,6 +10,7 @@
                     :endlessVectorId="vectorId"
                     :packageId="packageId"
                     :suiClient="suiClient"
+                    :suiMaster="suiMaster"
                     :walrusClient="walrusClient"
                     :sealClient="sealClient"
                     :sessionKey="sessionKey"
@@ -23,6 +24,8 @@
                     @error="onError"
                     @ready="onReady"
                     @change="onChange"
+                    @sessionKeyCreated="onSessionKeyCreated"
+                    @sessionKeyCleared="onSessionKeyCleared"
                     primaryColor="var(--lp-accent)"
                 />
             </div>
@@ -67,6 +70,7 @@
                                 :suiClient="suiClient"
                                 :packageId="packageId"
                                 :suiMaster="suiMaster"
+                                :sessionKey="sessionKey"
                                 @created="onSessionKeyCreated"
                                 @cleared="onSessionKeyCleared"
                                 class="sealSessionBtn"
@@ -554,7 +558,7 @@ export default {
     },
     mounted() {
         if (!this.connectedChain) {
-            const network = this.hashNetwork || 'testnet';
+            const network = this.hashNetwork || 'mainnet';
             setTimeout(() => {
                 if (!this.connectedChain) {
                     this.$store.sui.readOnlyToChain(network);

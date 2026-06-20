@@ -10,8 +10,8 @@
     >
         <WalrusMediaTopLeftMenu :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" :readOnly="readOnly" @filesSelected="onFilesSelected" />
 
-        <WalrusMediaTopRightMenu v-if="activeTab == 1" ref="topMenu1" :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
-        <WalrusMediaTopRightMenu v-if="activeTab == 2" ref="topMenu2" :walrusMediaFolder="currentFolder2" :primaryColor="primaryColor" @close="onClose" :readOnly="readOnly" />
+        <WalrusMediaTopRightMenu v-if="activeTab == 1" ref="topMenu1" :walrusMediaFolder="currentFolder1" :primaryColor="primaryColor" :isPolling="isPolling" @close="onClose" @togglePolling="$emit('togglePolling')" :readOnly="readOnly" />
+        <WalrusMediaTopRightMenu v-if="activeTab == 2" ref="topMenu2" :walrusMediaFolder="currentFolder2" :primaryColor="primaryColor" :isPolling="isPolling" @close="onClose" @togglePolling="$emit('togglePolling')" :readOnly="readOnly" />
 
         <div :style="{height: height}" style="position: relative; overflow: hidden; z-index: 500;">
             <WalrusMediaFolderView
@@ -79,7 +79,7 @@ import WalrusMediaBottomLeftMenu from './menus/WalrusMediaBottomLeftMenu.vue';
 import WalrusMediaViewer from './WalrusMediaViewer.vue';
 import WalrusMediaTextEditor from './menus/WalrusMediaTextEditor.vue';
 import Spinner from './helpers/Spinner.vue';
-import { shallowRef } from 'vue';
+import { shallowRef, toRaw } from 'vue';
 
 
 export default {
@@ -118,8 +118,13 @@ export default {
             required: false,
             default: '#2196F3',
         },
+        isPolling: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
     },
-    emits: ['close', 'change'],
+    emits: ['close', 'change', 'togglePolling'],
     data() {
         return {
             isDragging: false,
@@ -151,9 +156,22 @@ export default {
                 this.goToFolder(item.parent);
             } else if (item.isText) {
                 this.editingTextItem = item;
+            } else if (item.isFile) {
+                this.downloadFile(item);
             } else {
                 this.viewingMediaItem = item;
             }
+        },
+        async downloadFile(item) {
+            const rawItem = toRaw(item);
+            const content = await rawItem.getContent();
+            const blob = new Blob([content]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = item.name;
+            a.click();
+            URL.revokeObjectURL(url);
         },
         async goToFolder(folder) {
             if (this.activeTab == 1) {
@@ -261,6 +279,17 @@ export default {
                 if (this.$refs.tab_1) this.$refs.tab_1.bringToFront();
             });
             this.isInitializing = false;
+        },
+        async reinitialize(newRootFolder) {
+            this.currentFolder1 = null;
+            this.currentFolder2 = null;
+            this.activeTab = 1;
+            await this.$nextTick();
+            this.currentFolder1 = newRootFolder;
+            await this.currentFolder1.load();
+            this.currentFolder1.on('change', () => this.$emit('change'));
+            await this.$nextTick();
+            if (this.$refs.tab_1) this.$refs.tab_1.bringToFront();
         },
     },
     unmounted() {
