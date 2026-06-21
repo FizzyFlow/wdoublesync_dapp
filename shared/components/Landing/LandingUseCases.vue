@@ -101,11 +101,20 @@
 
             <!-- ── Built for AI Agents (accent card) ── -->
             <article class="ucCard ucCard--accent">
+                <div class="ucCard_skillLink">
+                    <BlobButton
+                        text="Agent Skill"
+                        href="https://github.com/FizzyFlow/wdoublesync_cli/blob/main/SKILL.md"
+                        icon="open_in_new"
+                        size="sm"
+                        color="primary"
+                    />
+                </div>
                 <h3 class="ucCard_title ucCard_title--accent">Built for<br>AI Agents</h3>
                 <p class="ucCard_desc">
                     Give AI agents a persistent, private filesystem. Store
-                    memories, knowledge, and artifacts they can read, write,
-                    and version across sessions.
+                    memories (pairs great with MemWal), knowledge, and artifacts
+                    they can read, write, and version across sessions.
                 </p>
 
                 <div class="ucCard_art ucCard_art--agent">
@@ -119,10 +128,11 @@
 
 <script>
 import LandingAgentScene from './LandingAgentScene.vue';
+import BlobButton from '../Theme/BlobButton.vue';
 
 export default {
     name: 'LandingUseCases',
-    components: { LandingAgentScene },
+    components: { LandingAgentScene, BlobButton },
     data() {
         return {
             files: [
@@ -133,7 +143,7 @@ export default {
                 { name: 'notes.txt', icon: 'description', folder: false, version: true },
             ],
             webAppFeatures: ['Upload and organize', 'Share securely', 'View versions', 'Restore instantly'],
-            cliFeatures: ['Incremental sync', 'Resume & retry', 'Bandwidth efficient', 'Works anywhere'],
+            cliFeatures: ['Push diffs, not full folders', 'Watch: auto-sync on save', 'Pull any past version', 'Rebate to trim storage cost'],
             sdkFeatures: ['JavaScript SDK', 'Simple APIs', 'Use in agents & apps', 'Full control'],
         };
     },
@@ -165,6 +175,7 @@ export default {
 }
 
 .ucCard--accent {
+    position: relative;
     border-color: rgba(79, 142, 247, 0.45);
     background:
         radial-gradient(ellipse 80% 60% at 50% 100%, rgba(79, 142, 247, 0.16) 0%, transparent 70%),
@@ -172,6 +183,12 @@ export default {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         0 0 30px -8px rgba(79, 142, 247, 0.3);
+}
+
+.ucCard_skillLink {
+    position: absolute;
+    top: 14px;
+    right: 14px;
 }
 
 .ucCard_title {

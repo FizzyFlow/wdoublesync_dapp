@@ -67,9 +67,9 @@
             </div>
         </section>
 
-        <LandingFeatures />
 
         <LandingUseCases />
+        <LandingFeatures />
 
         <LandingCallToAction @launch="launchApp" />
     </LandingShell>
