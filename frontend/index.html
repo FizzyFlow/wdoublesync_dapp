@@ -1,11 +1,49 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="/favicon.ico">
-    <title>EndlessVectorWalrus</title>
+    <title>DoubleSync — Decentralized File Storage & Sync on Sui + Walrus</title>
+    <meta name="description" content="Decentralized file storage, versioning, and sync on Sui + Walrus + Seal. Push folders as on-chain vectors with incremental CDC diffs, restore any version, optionally encrypt with Seal. AI agents: use the wdoublesync CLI skill instead of this UI — see /llms.txt">
+    <link rel="canonical" href="https://doublesync.wal.app/">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DoubleSync">
+    <meta property="og:title" content="DoubleSync — Decentralized File Storage & Sync on Sui + Walrus">
+    <meta property="og:description" content="Decentralized file storage, versioning, and sync on Sui + Walrus + Seal. Push folders as on-chain vectors, restore any version, optionally encrypt with Seal.">
+    <meta property="og:url" content="https://doublesync.wal.app/">
+    <meta property="og:image" content="https://doublesync.wal.app/logo.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="DoubleSync — Decentralized File Storage & Sync on Sui + Walrus">
+    <meta name="twitter:description" content="Decentralized file storage, versioning, and sync on Sui + Walrus + Seal.">
+    <meta name="twitter:image" content="https://doublesync.wal.app/logo.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DoubleSync",
+      "url": "https://doublesync.wal.app/",
+      "description": "Decentralized file storage, versioning, and sync on Sui + Walrus + Seal. Folders are pushed as on-chain vectors: Content-Defined Chunking computes minimal binary diffs between snapshots, and only changed chunks are uploaded as compressed patches into an append-only EndlessVector. Any previous version can be restored, and files can optionally be end-to-end encrypted with Seal.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript. Non-encrypted (public) vectors are public to read without a wallet; a Sui wallet is required for write operations and to read Seal-encrypted vectors.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "softwareHelp": {
+        "@type": "CreativeWork",
+        "name": "wdoublesync agent skill (SKILL.md)",
+        "description": "Agent skill and CLI for programmatic use — AI agents should use this instead of automating the web UI. Install: npm install -g @fizzyflow/wdoublesync_cli",
+        "url": "https://github.com/FizzyFlow/wdoublesync_cli/blob/main/SKILL.md"
+      },
+      "sameAs": [
+        "https://github.com/FizzyFlow/wdoublesync_cli",
+        "https://github.com/FizzyFlow/wdoublesync"
+      ]
+    }
+    </script>
 
 
     <style>
@@ -43,16 +81,116 @@
       .preloader.ready {
         opacity: 0;
       }
+
+      /* Boot screen: static crawler-readable content styled as a loading page.
+         Replaced entirely when the app mounts on #app. The app theme is light,
+         so pin the background against browser dark-mode defaults. */
+      html, body {
+        background: #ffffff;
+        margin: 0;
+      }
+      .boot {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 10vh 24px 48px;
+        text-align: center;
+        color: #3a4652;
+      }
+      .boot-logo {
+        width: 180px;
+        max-width: 60%;
+        height: auto;
+      }
+      .boot h1 {
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 20px 0 28px;
+        color: #26323e;
+      }
+      .boot-spinner {
+        width: 36px;
+        height: 36px;
+        margin: 0 auto;
+        border: 3px solid rgba(64, 153, 255, 0.25);
+        border-top-color: #4099ff;
+        border-radius: 50%;
+        animation: bootSpin 0.9s linear infinite;
+      }
+      .boot-status {
+        margin: 16px 0 4px;
+        font-size: 14px;
+        color: #6b7885;
+      }
+      .boot-slow {
+        font-size: 13px;
+        color: #9aa6b2;
+        min-height: 18px;
+        margin: 0 0 36px;
+        opacity: 0;
+        animation: bootFadeIn 0.8s ease 8s forwards;
+      }
+      .boot-about {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #8a95a1;
+        text-align: left;
+        margin: 12px 0;
+      }
+      .boot-about a { color: #4099ff; text-decoration: none; }
+      .boot-about a:hover { text-decoration: underline; }
+      .boot-about code {
+        background: rgba(64, 153, 255, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
+      @keyframes bootSpin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes bootFadeIn {
+        to { opacity: 1; }
+      }
     </style>
   </head>
   <body>
     <noscript>
-      <strong>We're sorry but doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+      <strong>DoubleSync doesn't work without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
 
     <div class="preloader"></div>
 
-    <div id="app"></div>
+    <div id="app">
+      <!-- Static boot screen: crawler-readable content, replaced by the app on mount -->
+      <div class="boot">
+        <img class="boot-logo" src="/logo.png" alt="DoubleSync logo">
+        <h1>DoubleSync — Decentralized File Storage &amp; Sync on Sui + Walrus</h1>
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <p class="boot-status">Loading the app…</p>
+        <p class="boot-slow">Still loading — the Walrus portal may be initializing. The first visit can take a little longer.</p>
+        <p class="boot-about">
+          DoubleSync is a set of tools — a CLI, an agent skill, and this dApp — for decentralized file storage,
+          versioning, and sync on Sui + Walrus + Seal. Folders are pushed as on-chain vectors: Content-Defined
+          Chunking computes minimal binary diffs between snapshots, and only changed chunks are uploaded as
+          compressed patches into an append-only EndlessVector. Any previous version can be restored, and files
+          can optionally be end-to-end encrypted with Seal.
+        </p>
+        <p class="boot-about">
+          You are browsing the DoubleSync dApp — a browser-based explorer and manager for DoubleSync vectors.
+          Non-encrypted (public) vectors are public to read — no wallet needed; a Sui wallet is required for write operations and to read Seal-encrypted vectors.
+          Pages: <a href="/select">select a vector</a>, <a href="/vector">browse a vector</a>.
+        </p>
+        <p class="boot-about">
+          AI agents: don't automate this web UI — use the
+          <a href="https://github.com/FizzyFlow/wdoublesync_cli/blob/main/SKILL.md">wdoublesync agent skill</a>
+          and CLI (<code>npm install -g @fizzyflow/wdoublesync_cli</code>) instead. See <a href="/llms.txt">/llms.txt</a>.
+          Source code: <a href="https://github.com/FizzyFlow/wdoublesync_cli">wdoublesync_cli</a>,
+          <a href="https://github.com/FizzyFlow/wdoublesync">wdoublesync</a>.
+        </p>
+      </div>
+    </div>
     <script type="module" src="src/main.js"></script>
     <!-- built files will be auto injected -->
   </body>

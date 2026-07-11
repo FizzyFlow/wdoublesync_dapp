@@ -1,7 +1,7 @@
 <template>
 
     <div class="rowRow" v-if="row.isFull || row.isEnded || true">
-        <template v-if="!isDisposed" v-for="(item, index) in row.items" :key="item.id">
+        <template v-if="!disposed" v-for="(item, index) in row.items" :key="item.id">
             <div class="rowItem" :style="{ width: row.widths[index] + '%' }">
                 <WalrusMediaBrowserRowItem :item="item" :primaryColor="primaryColor" @itemClick="onItemClick(item)" ref="items"  />
             </div>
@@ -22,6 +22,10 @@ export default {
             required: false,
             default: '#2196F3',
         },
+        disposed: {
+            type: Boolean,
+            default: true,
+        },
     },
     emits: ['itemClick', 'back'],
     components: {
@@ -33,6 +37,28 @@ export default {
         }
     },
     watch: {
+        disposed(val) {
+            if (val) {
+                if (this.row && this.row.items) {
+                    this.row.items.forEach(item => {
+                        const raw = toRaw(item);
+                        if (raw && typeof raw.dispose === 'function') raw.dispose();
+                    });
+                }
+            } else {
+                if (this.row.items && this.row.items.length) {
+                    let walrusMediaFolder = null;
+                    for (const item of this.row.items) {
+                        const raw = toRaw(item);
+                        if (raw && !raw.isFolder && raw.folder) {
+                            walrusMediaFolder = raw.folder;
+                            break;
+                        }
+                    }
+                    if (walrusMediaFolder) walrusMediaFolder.loadPreviews(this.row.items);
+                }
+            }
+        },
     },
     methods: {
         onItemClick(item) {

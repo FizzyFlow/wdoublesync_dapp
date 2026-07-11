@@ -39,6 +39,7 @@
 
 <script>
 import { SessionKey } from '@mysten/seal';
+import { toRaw } from 'vue';
 
 export default {
     name: 'SealSessionKeyButton',
@@ -93,7 +94,7 @@ export default {
                 }
                 await sessionKey.setPersonalMessageSignature(sig);
 
-                this._sessionKey = sessionKey;
+                this._sessionKey = toRaw(sessionKey);
                 this.hasSessionKey = true;
                 this.isExpired = false;
                 this._startExpiryCheck();
@@ -130,7 +131,7 @@ export default {
     watch: {
         sessionKey(newKey) {
             if (newKey) {
-                this._sessionKey = newKey;
+                this._sessionKey = toRaw(newKey);
                 this.hasSessionKey = true;
                 this.isExpired = false;
                 this._startExpiryCheck();

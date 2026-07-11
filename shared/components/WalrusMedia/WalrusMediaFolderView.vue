@@ -3,7 +3,7 @@
         class="rowsContainer" 
         :class="{rowsContainerActive: isOnFront}"
         :style="{zIndex: zIndex, minHeight: height, maxHeight: height, '--row-height': rowHeight }" ref="rowsContainer">
-        <WalrusMediaBrowserRow v-for="(item, index) in rows" :row="item" :primaryColor="primaryColor" :key="item.id" ref="rows"
+        <WalrusMediaBrowserRow v-for="(item, index) in rows" :row="item" :primaryColor="primaryColor" :key="item.id" :disposed="rowsDisposed[index]" ref="rows"
             @itemClick="onItemClick"  />
         <WalrusMediaContextMenu ref="contextMenu" @delete="onDeleteItem" @mkdir="onMakeDir" @newFile="onNewFile" @refresh="onRefresh" />
     </div>
@@ -12,7 +12,7 @@
 <script>
 import WalrusMediaBrowserRow from './WalrusMediaBrowserRow.vue';
 import WalrusMediaContextMenu from './menus/WalrusMediaContextMenu.vue';
-import { toRaw, shallowReactive } from 'vue';
+import { toRaw, shallowReactive, reactive } from 'vue';
 
 export default {
     name: 'WalrusMediaFolderView',
@@ -47,6 +47,7 @@ export default {
             zIndex: 9000,
 
             rows: shallowReactive([]),
+            rowsDisposed: reactive([]),
             rowsIds: {},
             cachedRowHeight: null,
             firstRowToKeep: 0,
@@ -95,14 +96,25 @@ export default {
             this.zIndex = 9000;
         },
         disposeRow(rowIndex) {
-            if (this.$refs.rows && this.$refs.rows[rowIndex]) {
-                this.$refs.rows[rowIndex].dispose();
+            if (rowIndex >= 0 && rowIndex < this.rowsDisposed.length) {
+                this.rowsDisposed[rowIndex] = true;
             }
         },
         restoreRow(rowIndex) {
-            if (this.$refs.rows && this.$refs.rows[rowIndex]) {
-                this.$refs.rows[rowIndex].restore();
+            if (rowIndex >= 0 && rowIndex < this.rowsDisposed.length) {
+                this.rowsDisposed[rowIndex] = false;
             }
+        },
+        measureRowHeight() {
+            // All rows are uniform fixed height, so derive it straight from the DOM.
+            // scrollHeight / rowCount is exact and immune to $refs ordering, media-query
+            // height changes, and not-yet-rendered rows. Only cache a real (>0) value.
+            const container = this.$refs.rowsContainer;
+            if (container && this.rows.length > 0 && container.scrollHeight > 0) {
+                this.cachedRowHeight = container.scrollHeight / this.rows.length;
+            }
+            // Fall back to a sane default only until the DOM is measurable; never cache it.
+            return this.cachedRowHeight || 200;
         },
         isRowVisible(rowIndex) {
             const container = this.$refs.rowsContainer;
@@ -110,16 +122,9 @@ export default {
                 return false;
             }
 
-            if (this.cachedRowHeight === null) {
-                if (this.$refs.rows && this.$refs.rows[0] && this.$refs.rows[0].$el) {
-                    this.cachedRowHeight = this.$refs.rows[0].$el.offsetHeight;
-                } else {
-                    this.cachedRowHeight = 200;
-                }
-            }
-
-            const rowTop = rowIndex * this.cachedRowHeight;
-            const rowBottom = rowTop + this.cachedRowHeight;
+            const rowHeight = this.measureRowHeight();
+            const rowTop = rowIndex * rowHeight;
+            const rowBottom = rowTop + rowHeight;
 
             const containerScrollTop = container.scrollTop;
             const containerScrollBottom = containerScrollTop + container.clientHeight;
@@ -135,28 +140,26 @@ export default {
                 nContainerHeight = container.clientHeight;
             }
 
-            if (this.cachedRowHeight === null) {
-                if (this.$refs.rows && this.$refs.rows[0] && this.$refs.rows[0].$el) {
-                    this.cachedRowHeight = this.$refs.rows[0].$el.offsetHeight;
-                } else {
-                    this.cachedRowHeight = 200;
-                }
-            }
+            const rowHeight = this.measureRowHeight();
 
-            const firstVisibleRow = Math.floor(nScrollTop / this.cachedRowHeight);
-            const lastVisibleRow = Math.ceil((nScrollTop + nContainerHeight) / this.cachedRowHeight);
+            const firstVisibleRow = Math.floor(nScrollTop / rowHeight);
+            const lastVisibleRow = Math.ceil((nScrollTop + nContainerHeight) / rowHeight);
 
             this.firstRowToKeep = Math.max(0, firstVisibleRow - 3);
             this.lastRowToKeep = Math.min(this.rows.length - 1, lastVisibleRow + 3);
         },
-        onScrolled(event) {
-            const container = event.target;
-            const scrollTop = container.scrollTop;
-            if (!this.__lastScrolledTop || Math.abs(this.__lastScrolledTop - scrollTop) > 200) {
+        onScrolled() {
+            if (this.__scrollRaf) return;
+            this.__scrollRaf = requestAnimationFrame(() => {
+                this.__scrollRaf = null;
+                const container = this.$refs.rowsContainer;
+                if (!container) return;
+                const scrollTop = container.scrollTop;
+                if (this.__lastScrolledTop !== undefined && Math.abs(this.__lastScrolledTop - scrollTop) <= 200) {
+                    return;
+                }
                 this.__lastScrolledTop = scrollTop;
-
                 this.recalculateVisibles(scrollTop, container.clientHeight);
-
                 for (let i = 0; i < this.rows.length; i++) {
                     if (i < this.firstRowToKeep || i > this.lastRowToKeep) {
                         this.disposeRow(i);
@@ -164,7 +167,7 @@ export default {
                         this.restoreRow(i);
                     }
                 }
-            }
+            });
         },
         async loadPreviewsInterval() {
             const delayTillNext = 10;
@@ -209,9 +212,10 @@ export default {
     },
     mounted() {
         this.loadPreviewsInterval();
-        this.walrusMediaFolder.rows.map(r=>{ 
+        this.walrusMediaFolder.rows.map(r=>{
             this.rowsIds[r.id] = true;
             this.rows.push(r);
+            this.rowsDisposed.push(true);
         });
 
         setTimeout(()=>{
@@ -236,6 +240,7 @@ export default {
             }
             this.rowsIds[row.id] = true;
             this.rows.push(row);
+            this.rowsDisposed.push(true);
             this.recalculateVisibles();
             if (this.rows.length - 3 <= this.lastRowToKeep) {
                 let i = this.rows.length - 1;
@@ -246,7 +251,10 @@ export default {
         };
         this.__onRowRemoved = (row) => {
             const idx = this.rows.indexOf(row);
-            if (idx !== -1) this.rows.splice(idx, 1);
+            if (idx !== -1) {
+                this.rows.splice(idx, 1);
+                this.rowsDisposed.splice(idx, 1);
+            }
             delete this.rowsIds[row.id];
         };
         this.__onWindowResize = () => {
@@ -270,6 +278,9 @@ export default {
         this.detachEventsFromFolder(this.walrusMediaFolder);
         if (this.__onContainerScroll && this.$refs.rowsContainer) {
             this.$refs.rowsContainer.removeEventListener('scroll', this.__onContainerScroll);
+        }
+        if (this.__scrollRaf) {
+            cancelAnimationFrame(this.__scrollRaf);
         }
         clearTimeout(this.__loadPreviewsTimeout);
     },

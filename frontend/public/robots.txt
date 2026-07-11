@@ -1,0 +1,7 @@
+# DoubleSync — https://doublesync.wal.app/
+# AI agents: see /llms.txt — use the wdoublesync CLI skill instead of automating this UI.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://doublesync.wal.app/sitemap.xml
