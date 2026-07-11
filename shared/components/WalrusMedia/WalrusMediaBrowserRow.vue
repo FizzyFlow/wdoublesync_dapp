@@ -38,6 +38,7 @@ export default {
     },
     watch: {
         disposed(val) {
+            this.isDisposed = val;
             if (val) {
                 if (this.row && this.row.items) {
                     this.row.items.forEach(item => {
@@ -100,13 +101,13 @@ export default {
     },
     mounted() {
         this.__onItemAdded = (item) => {
-            if (this.isDisposed) {
+            if (this.disposed) {
                 return;
             }
             this.$forceUpdate();
         };
         this.__onItemRemoved = () => {
-            if (this.isDisposed) return;
+            if (this.disposed) return;
             this.$forceUpdate();
         };
         this.row.on('itemAdded', this.__onItemAdded);

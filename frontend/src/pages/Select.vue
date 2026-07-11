@@ -33,18 +33,7 @@
                                 label="Encrypt with Seal"
                                 dense
                                 class="select_seal"
-                                :disable="isMainnet"
                             />
-                            <q-icon
-                                v-if="isMainnet"
-                                name="help"
-                                size="20px"
-                                class="select_sealHelp"
-                            >
-                                <q-tooltip>
-                                    Waiting for mainnet Seal servers keys from Mysten Labs. Please test it on testnet for now.
-                                </q-tooltip>
-                            </q-icon>
                         </div>
                         <BlobButton
                             :text="connectedAddress ? 'Create New Vector' : 'Connect Wallet'"
@@ -168,9 +157,6 @@ export default {
         },
         networkName() {
             return normalizeNetworkName(this.connectedChain);
-        },
-        isMainnet() {
-            return this.networkName === 'mainnet';
         },
         canCreate() {
             return !!(this.connectedAddress && this.suiClient && this.packageId);

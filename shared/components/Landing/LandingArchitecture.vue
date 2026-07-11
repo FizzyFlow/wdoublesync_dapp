@@ -8,7 +8,7 @@
       storage) remain HTML overlays positioned with pct(gx,gy,gz) — the SAME projection
       the SVG uses. Tune by editing grid coords (not pixel %): see SCALE / ANGLE / VIEWBOX.
     -->
-    <section class="arch" ref="root">
+    <section class="arch" ref="root" :class="{ 'arch--paused': !linesActive }" @mouseenter="kick">
         <div class="arch_stage" :style="stageStyle">
 
 <IsoStack :color="isoColor" :scale="11" :angle="27" :glow="isoGlow" :stroke-width="isoStrokeWidth" :fog="1" :fogNear="16" :fogFar="-10">
@@ -101,7 +101,9 @@ export default {
     components: { IsoStack, IsoBox },
     data() {
         const [minX, minY, w, h] = VIEWBOX.split(/\s+/).map(Number);
-        return { SCALE, ANGLE, VIEWBOX, vb: { minX, minY, w, h } };
+        // linesActive gates the dashed flow-line CSS animations — same
+        // visibility + activity + 3s-idle rules as LandingAgentScene
+        return { SCALE, ANGLE, VIEWBOX, vb: { minX, minY, w, h }, linesActive: false };
     },
     computed: {
         stageStyle() {
@@ -143,9 +145,72 @@ export default {
                 top: ((sy - this.vb.minY) / this.vb.h) * 100 + '%',
             };
         },
+        // user activity (mouse move / scroll / hover): refresh the idle clock
+        // and resume the dash-flow lines if the scene is on screen
+        kick() {
+            this._lastActivity = performance.now();
+            if (this._visible) this.resumeLines();
+        },
+        resumeLines() {
+            if (this._reduceMotion || this.linesActive) return;
+            this.linesActive = true;
+            // paused CSS animations keep their dash offset, so lines resume
+            // exactly where they stopped; cheap 500ms poll decides idle stop
+            this._idleTimer = window.setInterval(() => {
+                if (performance.now() - this._lastActivity > 3000) this.pauseLines();
+            }, 500);
+        },
+        pauseLines() {
+            if (this._idleTimer) {
+                window.clearInterval(this._idleTimer);
+                this._idleTimer = null;
+            }
+            this.linesActive = false;
+        },
+    },
+    mounted() {
+        if (typeof window === 'undefined') return;
+        this._reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (this._reduceMotion) return;
+
+        this._visible = false;
+        this._lastActivity = 0;
+        this._onActivity = () => this.kick();
+        window.addEventListener('mousemove', this._onActivity, { passive: true });
+        window.addEventListener('scroll', this._onActivity, { passive: true });
+
+        if ('IntersectionObserver' in window) {
+            this._observer = new IntersectionObserver(
+                (entries) => {
+                    for (const entry of entries) {
+                        this._visible = entry.isIntersecting;
+                        if (entry.isIntersecting) this.kick(); // runs ~3s even without activity
+                        else this.pauseLines();
+                    }
+                },
+                { threshold: 0.15 }
+            );
+            this._observer.observe(this.$refs.root);
+        } else {
+            this._visible = true;
+            this.kick();
+        }
+    },
+    beforeUnmount() {
+        if (this._observer) this._observer.disconnect();
+        if (this._onActivity) {
+            window.removeEventListener('mousemove', this._onActivity);
+            window.removeEventListener('scroll', this._onActivity);
+        }
+        this.pauseLines();
     },
 };
 </script>
+
+<!-- non-scoped: the dash-flow animation name is set via inline style inside IsoBox -->
+<style>
+.arch--paused [style*="isoBoxDashFlow"] { animation-play-state: paused !important; }
+</style>
 
 <style scoped>
 .arch {

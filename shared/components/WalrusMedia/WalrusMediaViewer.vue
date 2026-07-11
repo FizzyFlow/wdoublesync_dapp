@@ -225,7 +225,7 @@ export default {
     align-items: center;
     justify-content: center;
 }
-.mediaDisplay { object-fit: contain; display: block; margin: auto; }
+.mediaDisplay { object-fit: contain; display: block; margin: auto; max-width: 100%; max-height: 100%; }
 .loadingContainer {
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
