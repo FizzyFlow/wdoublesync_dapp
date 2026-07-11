@@ -1,6 +1,6 @@
 # DoubleSync
 
-> Decentralized file storage, versioning, and sync on Sui + Walrus + Seal. Folders are pushed as on-chain vectors: Content-Defined Chunking computes minimal binary diffs between snapshots, and only changed chunks are uploaded as compressed patches into an append-only EndlessVector. Any previous version can be restored, and files can optionally be end-to-end encrypted with Seal.
+> Decentralized file storage, versioning, and sync on Sui + Walrus + Seal. Folders are pushed as on-chain vectors: Content-Defined Chunking computes minimal binary diffs between snapshots, and only changed chunks are uploaded as compressed patches into an append-only EndlessVector. Any previous version can be restored. Vectors are end-to-end encrypted with Seal by default; they can also be created as public (non-encrypted).
 
 DoubleSync is a set of tools: a CLI, an agent skill, and this dApp. You are browsing the DoubleSync dApp (https://doublesync.wal.app/) — a browser-based explorer and manager for DoubleSync vectors. It runs entirely client-side. Non-encrypted (public) vectors are public to read — no wallet needed. A Sui wallet is required for write operations and to read Seal-encrypted vectors.
 
@@ -10,17 +10,20 @@ Do not automate this web UI. There is an agent skill and CLI built for programma
 
 - [wdoublesync skill (SKILL.md)](https://github.com/FizzyFlow/wdoublesync_cli/blob/main/SKILL.md): Agent skill for decentralized file storage, versioning, and sync on Sui + Walrus + Seal
 - Install the CLI: `npm install -g @fizzyflow/wdoublesync_cli`
-- Configure a Sui wallet key for push operations via `--key`, `--phrase`, or the `WDOUBLESYNC_KEY` environment variable
+- Configure a Sui wallet key via the `WDOUBLESYNC_KEY` environment variable, or the `--key` / `--phrase` flags — required for push operations and for reading Seal-encrypted vectors; optional for public vector reads
 
 Core commands:
 
-- `push` — sync a local folder to an on-chain vector (creates a new vector if no ID is provided)
-- `pull` — restore a vector snapshot to a local folder
-- `info` — view vector metadata and chain details
-- `watch` — bi-directional sync with auto-push/pull
+- `push` — sync a local folder to an on-chain vector (creates a new vector if no ID is provided; Seal encryption on by default, `--no-seal` for a public vector)
+- `pull` — restore a vector snapshot to a local folder (`--version N` to restore an older version)
+- `diff` — preview local changes vs the on-chain state (read-only)
+- `info` — view vector metadata and chain/wallet details
+- `watch` — bi-directional sync with auto-push/pull (`--poll-interval`, `--push-only`, `--pull-only`)
 - `rebate` — burn archive history and rebuild as a fresh snapshot
 
-After a push, a vector can be inspected in this web app at `https://doublesync.wal.app/vector#<network>:<vector-id>` (e.g. `https://doublesync.wal.app/vector#testnet:0x...`).
+Select the network with `--chain mainnet|testnet|devnet|localnet` (testnet is the default).
+
+After a push, a vector can be inspected in this web app at `https://doublesync.wal.app/vector#<network>:<vector-id>` (e.g. `https://doublesync.wal.app/vector#testnet:0x...`). Save vector IDs and pushed versions somewhere durable (the skill suggests MemWal, its companion agent-memory tool) so they can be recalled in later sessions.
 
 ## Source code and docs
 
@@ -29,6 +32,6 @@ After a push, a vector can be inspected in this web app at `https://doublesync.w
 
 ## Networks
 
-- Works on Sui mainnet and testnet (plus localnet for development)
+- Works on Sui mainnet and testnet (plus devnet and localnet for development)
 - Storage: Walrus decentralized blob storage and Sui object storage
-- Optional encryption: Seal, with address-scoped access
+- Encryption: Seal with address-scoped access — on by default, disable per vector with `--no-seal`
